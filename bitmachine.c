@@ -47,7 +47,8 @@ do {                                                                           \
 } while (0)
 #endif
 
-#define OP_MASK 0xFF000000
+#define OP_MASK  0xFF000000
+#define REG_MASK 0x000001FF
 
 #if 0
 #define OP0(w)  ( ((w) & OP_MASK) == 0x00000000 )
@@ -82,6 +83,13 @@ do {                                                                           \
 #define OP13 0xD0000000
 #define OP14 0xE0000000
 #endif
+
+/* OP???????????RRRRRR */
+/* 0000 0000 0000 0000 */
+
+#define RA 0x00000007
+#define RB 0x00000038
+#define RC 0x000001C0
 
 enum {
     SUCCESS = 0,
@@ -212,12 +220,15 @@ store_app(vm_t *vm, uint32_t buf)
 int
 echo_app(vm_t *vm)
 {
-    size_t index = vm->app_size / sizeof(uint32_t);
+    size_t size = vm->app_size / sizeof(uint32_t);
     size_t i;
     out("app size: %lu\n", (unsigned long)vm->app_size);
 
-    for (i = 0; i < index; ++i) {
-        printf("%08x\n", vm->words[0][i]);
+    for (i = 0; i < size; ++i) {
+        printf("(%08x): OP: %08x REG: %08x\n",
+               vm->words[0][i],
+               vm->words[0][i] & OP_MASK,
+               vm->words[0][i] & REG_MASK);
     }
 
     return SUCCESS;
