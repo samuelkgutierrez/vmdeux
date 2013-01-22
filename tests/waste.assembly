@@ -1,0 +1,7 @@
+;; infinite loop with allocation:
+label @start
+  loadimm 0 100
+  alloc 1 0
+  loadimm 1 0
+  loadimm 4 @start
+  loadprog 1 4
