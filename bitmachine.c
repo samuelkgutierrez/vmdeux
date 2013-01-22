@@ -95,6 +95,10 @@ typedef struct registers_t {
     uint32_t r[N_REGISTERS];
 } registers_t;
 
+typedef struct vm_t {
+    registers_t mr;
+} vm_t;
+
 char *opstrs[32] = {
     "Conditional Move",
     "Array Index",
@@ -115,7 +119,7 @@ char *opstrs[32] = {
 
 /* ////////////////////////////////////////////////////////////////////////// */
 int
-doop(uint32_t w, registers_t *mr)
+doop(uint32_t w, vm_t *vm)
 {
     switch (w & OP_MASK) {
         case OP0:
@@ -142,9 +146,9 @@ go(const char *what)
     ssize_t bread = 0;
     uint32_t ibuf = 0;
     int rc = SUCCESS;
-    registers_t *mr = NULL;
+    vm_t *vm = NULL;
 
-    if (NULL == (mr = calloc(1, sizeof(*mr)))) {
+    if (NULL == (vm = calloc(1, sizeof(*vm)))) {
         OOR_COMPLAIN();
         return ERR_OOR;
     }
@@ -172,15 +176,15 @@ go(const char *what)
         /* else all is well */
         /* convert to big endian */
         ibuf = htonl(ibuf);
-        doop(ibuf, mr);
+        doop(ibuf, vm);
     }
 
 out:
     if (-1 != fd) {
         close(fd);
     }
-    if (NULL != mr) {
-        free(mr);
+    if (NULL != vm) {
+        free(vm);
     }
     return rc;
 }
