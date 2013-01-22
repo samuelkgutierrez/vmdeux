@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <stdbool.h>
 
 /* ////////////////////////////////////////////////////////////////////////// */
 /* TODO
@@ -87,7 +88,8 @@ enum {
     ERR,
     ERR_OOR,
     ERR_IO,
-    ERR_IOOB
+    ERR_IOOB,
+    ERR_INLD_INPUT
 };
 
 /* machine registers */
@@ -96,8 +98,58 @@ typedef struct registers_t {
 } registers_t;
 
 typedef struct vm_t {
+    size_t app_size;
+    /* machine registers */
     registers_t mr;
+    uint32_t *zero_array;
+    uint32_t **words;
+    size_t max_index;
 } vm_t;
+
+
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
+vm_construct(vm_t **new)
+{
+    vm_t *tmp = NULL;
+    int rc = SUCCESS;
+
+    if (NULL == new) {
+        rc = ERR_INLD_INPUT;
+        goto out;
+    }
+    if (NULL == (tmp = calloc(4096, sizeof(*tmp)))) {
+        rc = ERR_OOR;
+        goto out;
+    }
+    if (NULL == (tmp->words = calloc(4096, sizeof(*tmp->words)))) {
+        rc = ERR_OOR;
+        goto out;
+    }
+    tmp->app_size = 0;
+    tmp->max_index = 4096;
+    tmp->zero_array = tmp->words[0];
+
+    /* XXX cleanup */
+
+out:
+    /* failure */
+    if (SUCCESS != rc) {
+        if (tmp) {
+        }
+    }
+    *new = tmp;
+    return SUCCESS;
+}
+
+#if 0
+//static int
+//vm_destruct(vm_t **old)
+//{
+//    /* TODO */
+//    return SUCCESS;
+//}
+#endif
 
 char *opstrs[32] = {
     "Conditional Move",
@@ -139,6 +191,39 @@ doop(uint32_t w, vm_t *vm)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
+static int
+store_app(vm_t *vm, uint32_t buf)
+{
+    static int index = 0;
+    static bool init = true;
+
+    if (init) {
+        /* XXX cleanup -needs realloc or something */
+        vm->words[0] = calloc(4096, sizeof(uint32_t));
+        init = false;
+    }
+    vm->words[0][index] = htonl(buf);
+    vm->app_size = (index++ * sizeof(uint32_t));
+
+    return SUCCESS;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
+int
+echo_app(vm_t *vm)
+{
+    size_t index = vm->app_size / sizeof(uint32_t);
+    size_t i;
+    out("app size: %lu\n", (unsigned long)vm->app_size);
+
+    for (i = 0; i < index; ++i) {
+        printf("%08x\n", vm->words[0][i]);
+    }
+
+    return SUCCESS;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
 int
 go(const char *what)
 {
@@ -148,9 +233,9 @@ go(const char *what)
     int rc = SUCCESS;
     vm_t *vm = NULL;
 
-    if (NULL == (vm = calloc(1, sizeof(*vm)))) {
-        OOR_COMPLAIN();
-        return ERR_OOR;
+    if (SUCCESS != (rc = vm_construct(&vm))) {
+        fprintf(stderr, "vm_construct error: %d\n", rc);
+        return rc;
     }
 
     out("reading: %s\n", what);
@@ -175,9 +260,14 @@ go(const char *what)
         }
         /* else all is well */
         /* convert to big endian */
-        ibuf = htonl(ibuf);
-        doop(ibuf, vm);
+        if (SUCCESS != (rc = store_app(vm, ibuf))) {
+            fprintf(stderr, "store_app failure: %d\n", rc);
+            /* rc is set */
+            goto out;
+        }
     }
+
+    echo_app(vm);
 
 out:
     if (-1 != fd) {
