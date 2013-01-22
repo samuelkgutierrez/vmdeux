@@ -50,7 +50,8 @@ do {                                                                           \
 #define OP_MASK  0xFF000000
 #define REG_MASK 0x000001FF
 
-#define WORD_MAX_INDEX ( 1 << 9 )
+#define MEM_MAX_INDEX ( 1 << 9 )
+#define WORD_MAX_INDEX 4096
 
 #if 0
 #define OP0(w)  ( ((w) & OP_MASK) == 0x00000000 )
@@ -113,6 +114,7 @@ typedef struct vm_t {
     registers_t mr;
     uint32_t *zero_array;
     uint32_t **words;
+    uint32_t *memory;
     size_t max_index;
 } vm_t;
 
@@ -132,7 +134,12 @@ vm_construct(vm_t **new)
         rc = ERR_OOR;
         goto out;
     }
+    /* XXX update max to grow */
     if (NULL == (tmp->words = calloc(WORD_MAX_INDEX, sizeof(*tmp->words)))) {
+        rc = ERR_OOR;
+        goto out;
+    }
+    if (NULL == (tmp->memory = calloc(MEM_MAX_INDEX, sizeof(*tmp->memory)))) {
         rc = ERR_OOR;
         goto out;
     }
@@ -183,15 +190,24 @@ char *opstrs[32] = {
 int
 doop(uint32_t w, vm_t *vm)
 {
+    size_t rega = (w & RA);
+    size_t regb = (w & RB);
+    size_t regc = (w & RC);
+
     switch (w & OP_MASK) {
         case OP0:
             out("(%08x) OP: %s\n", w, opstrs[0]);
+            if (0 == vm->memory[regc]) {
+                vm->memory[rega] = vm->memory[regb];
+            }
             break;
         case OP1:
             out("(%08x) OP: %s\n", w, opstrs[1]);
+            /* ??? */
             break;
         case OP2:
             out("(%08x) OP: %s\n", w, opstrs[2]);
+            /* ??? */
             break;
         case OP3:
             out("(%08x) OP: %s\n", w, opstrs[3]);
