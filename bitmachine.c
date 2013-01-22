@@ -50,6 +50,8 @@ do {                                                                           \
 #define OP_MASK  0xFF000000
 #define REG_MASK 0x000001FF
 
+#define WORD_MAX_INDEX ( 1 << 9 )
+
 #if 0
 #define OP0(w)  ( ((w) & OP_MASK) == 0x00000000 )
 #define OP1(w)  ( ((w) & OP_MASK) == 0x10000000 )
@@ -130,12 +132,12 @@ vm_construct(vm_t **new)
         rc = ERR_OOR;
         goto out;
     }
-    if (NULL == (tmp->words = calloc(4096, sizeof(*tmp->words)))) {
+    if (NULL == (tmp->words = calloc(WORD_MAX_INDEX, sizeof(*tmp->words)))) {
         rc = ERR_OOR;
         goto out;
     }
     tmp->app_size = 0;
-    tmp->max_index = 4096;
+    tmp->max_index = WORD_MAX_INDEX;
     tmp->zero_array = tmp->words[0];
 
     /* XXX cleanup */
@@ -255,7 +257,8 @@ echo_app(vm_t *vm)
 {
     size_t size = vm->app_size / sizeof(uint32_t);
     size_t i;
-    out("app size: %lu\n", (unsigned long)vm->app_size);
+    out("oo app size: %lu\n", (unsigned long)vm->app_size);
+    out("oo max word index: %lu\n", (unsigned long)vm->max_index);
 
     for (i = 0; i < size; ++i) {
         printf("(%08x): OP: %08x REG: %08x\n",
