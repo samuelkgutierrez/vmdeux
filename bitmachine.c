@@ -188,6 +188,39 @@ doop(uint32_t w, vm_t *vm)
         case OP1:
             out("(%08x) OP: %s\n", w, opstrs[1]);
             break;
+        case OP2:
+            out("(%08x) OP: %s\n", w, opstrs[2]);
+            break;
+        case OP3:
+            out("(%08x) OP: %s\n", w, opstrs[3]);
+            break;
+        case OP4:
+            out("(%08x) OP: %s\n", w, opstrs[4]);
+            break;
+        case OP5:
+            out("(%08x) OP: %s\n", w, opstrs[5]);
+            break;
+        case OP6:
+            out("(%08x) OP: %s\n", w, opstrs[6]);
+            break;
+        case OP7:
+            out("(%08x) OP: %s\n", w, opstrs[7]);
+            break;
+        case OP8:
+            out("(%08x) OP: %s\n", w, opstrs[8]);
+            break;
+        case OP9:
+            out("(%08x) OP: %s\n", w, opstrs[9]);
+            break;
+        case OP10:
+            out("(%08x) OP: %s\n", w, opstrs[10]);
+            break;
+        case OP11:
+            out("(%08x) OP: %s\n", w, opstrs[11]);
+            break;
+        case OP12:
+            out("(%08x) OP: %s\n", w, opstrs[12]);
+            break;
         case OP13:
             out("(%08x) OP: %s\n", w, opstrs[13]);
             break;
@@ -229,6 +262,7 @@ echo_app(vm_t *vm)
                vm->words[0][i],
                vm->words[0][i] & OP_MASK,
                vm->words[0][i] & REG_MASK);
+        doop(vm->words[0][i], vm);
     }
 
     return SUCCESS;
