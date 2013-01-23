@@ -9,11 +9,9 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <errno.h>
 
 /* ////////////////////////////////////////////////////////////////////////// */
-/* TODO
- * input validation
- * */
 
 /* ////////////////////////////////////////////////////////////////////////// */
 
@@ -53,23 +51,6 @@ do {                                                                           \
 #define MEM_MAX_INDEX ( 1 << 9 )
 #define WORD_MAX_INDEX 4096
 
-#if 0
-#define OP0(w)  ( ((w) & OP_MASK) == 0x00000000 )
-#define OP1(w)  ( ((w) & OP_MASK) == 0x10000000 )
-#define OP2(w)  ( ((w) & OP_MASK) == 0x20000000 )
-#define OP3(w)  ( ((w) & OP_MASK) == 0x30000000 )
-#define OP4(w)  ( ((w) & OP_MASK) == 0x40000000 )
-#define OP5(w)  ( ((w) & OP_MASK) == 0x50000000 )
-#define OP6(w)  ( ((w) & OP_MASK) == 0x60000000 )
-#define OP7(w)  ( ((w) & OP_MASK) == 0x70000000 )
-#define OP8(w)  ( ((w) & OP_MASK) == 0x80000000 )
-#define OP9(w)  ( ((w) & OP_MASK) == 0x90000000 )
-#define OP10(w) ( ((w) & OP_MASK) == 0xA0000000 )
-#define OP11(w) ( ((w) & OP_MASK) == 0xB0000000 )
-#define OP12(w) ( ((w) & OP_MASK) == 0xC0000000 )
-#define OP13(w) ( ((w) & OP_MASK) == 0xD0000000 )
-#define OP14(w) ( ((w) & OP_MASK) == 0xE0000000 )
-#else
 #define OP0  0x00000000
 #define OP1  0x10000000
 #define OP2  0x20000000
@@ -85,7 +66,6 @@ do {                                                                           \
 #define OP12 0xC0000000
 #define OP13 0xD0000000
 #define OP14 0xE0000000
-#endif
 
 /* OP???????????RRRRRR */
 /* 0000 0000 0000 0000 */
@@ -344,19 +324,35 @@ out:
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
+static void
+usage(void)
+{
+    printf("usage: %s APP\n", PACKAGE);
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
 /* ////////////////////////////////////////////////////////////////////////// */
 /* ////////////////////////////////////////////////////////////////////////// */
 int
 main(int argc, char **argv)
 {
-    int erc = EXIT_FAILURE;
     int rc = ERR;
 
-    if (SUCCESS != (rc = go(argv[1]))) {
-        goto out;
+    /* enough args? */
+    if (2 != argc) {
+        usage();
+        return EXIT_FAILURE;
     }
-    erc = EXIT_SUCCESS;
-
-out:
-    return erc;
+    /* valid path? */
+    else if (-1 == access(argv[1], F_OK | R_OK)) {
+        int err = errno;
+        fprintf(stderr, "cannot read %s - %s.\n", argv[1], strerror(err));
+        usage();
+        return EXIT_FAILURE;
+    }
+    /* if we are here, then we can read the input file */
+    if (SUCCESS != (rc = go(argv[1]))) {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
