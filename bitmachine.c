@@ -353,10 +353,12 @@ go(const char *exe)
         return rc;
     }
     if (SUCCESS != (rc = load_app(vm, exe))) {
+        fprintf(stderr, "load_app error: %d\n", rc);
         /* rc is set */
         goto out;
     }
     if (SUCCESS != (rc = run(vm))) {
+        fprintf(stderr, "run error: %d\n", rc);
         goto out;
     }
 
