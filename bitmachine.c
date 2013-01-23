@@ -245,31 +245,13 @@ doop(uint32_t w, vm_t *vm)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-static int
-store_app(vm_t *vm, uint32_t buf)
-{
-    static int index = 0;
-    static bool init = true;
-
-    if (init) {
-        /* XXX cleanup -needs realloc or something */
-        vm->words[0] = calloc(4096, sizeof(uint32_t));
-        init = false;
-    }
-    vm->words[0][index] = htonl(buf);
-    vm->app_size = (index++ * sizeof(uint32_t));
-
-    return SUCCESS;
-}
-
-/* ////////////////////////////////////////////////////////////////////////// */
 int
 echo_app(vm_t *vm)
 {
     size_t size = vm->app_size / sizeof(uint32_t);
     size_t i;
-    out("oo app size: %lu\n", (unsigned long)vm->app_size);
-    out("oo max word index: %lu\n", (unsigned long)vm->max_index);
+    out("o app size: %lu\n", (unsigned long)vm->app_size);
+    out("o max word index: %lu\n", (unsigned long)vm->max_index);
 
     for (i = 0; i < size; ++i) {
         printf("(%08x): OP: %08x REG: %08x\n",
@@ -290,6 +272,7 @@ load_app(vm_t *vm, const char *exe)
     ssize_t bread = 0;
     uint32_t ibuf = 0;
     int rc = SUCCESS;
+    size_t word_index = 0;
 
     if (NULL == vm || NULL == exe) return ERR_INLD_INPUT;
 
@@ -313,13 +296,13 @@ load_app(vm_t *vm, const char *exe)
             rc = ERR_IO;
             goto out;
         }
-        /* else all is well */
-        if (SUCCESS != (rc = store_app(vm, ibuf))) {
-            fprintf(stderr, "store_app failure: %d\n", rc);
-            /* rc is set */
-            goto out;
-        }
+        /* else all is well, so append word to program "0" array */
+        /* NOTE: a small over allocation... just by one */
+        vm->words[0] = realloc(vm->words[0],
+                               (word_index + 1) * sizeof(uint32_t));
+        vm->words[0][word_index++] = htonl(ibuf);
     }
+    vm->app_size = word_index * sizeof(uint32_t);
 
     echo_app(vm);
 
