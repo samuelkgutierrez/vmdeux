@@ -104,7 +104,10 @@ typedef struct registers_t {
 } registers_t;
 
 typedef struct vm_t {
+    /* size of application image */
     size_t app_size;
+    /* sizeof machine word */
+    size_t word_size;
     /* machine registers */
     registers_t mr;
     uint32_t *zero_array;
@@ -141,6 +144,7 @@ vm_construct(vm_t **new)
     tmp->app_size = 0;
     tmp->max_index = WORD_MAX_INDEX;
     tmp->zero_array = tmp->words[0];
+    tmp->word_size = sizeof(uint32_t);
 
     /* XXX cleanup */
 
@@ -248,7 +252,7 @@ doop(uint32_t w, vm_t *vm)
 int
 echo_app(vm_t *vm)
 {
-    size_t size = vm->app_size / sizeof(uint32_t);
+    size_t size = vm->app_size / vm->word_size;
     size_t i;
     out("o app size: %lu\n", (unsigned long)vm->app_size);
     out("o max word index: %lu\n", (unsigned long)vm->max_index);
@@ -297,12 +301,12 @@ load_app(vm_t *vm, const char *exe)
             goto out;
         }
         /* else all is well, so append word to program "0" array */
-        /* NOTE: a small over allocation... just by one */
+        /* NOTE: a small over allocation... just by one (so no malloc 0) */
         vm->words[0] = realloc(vm->words[0],
                                (word_index + 1) * sizeof(uint32_t));
         vm->words[0][word_index++] = htonl(ibuf);
     }
-    vm->app_size = word_index * sizeof(uint32_t);
+    vm->app_size = word_index * vm->word_size;
 
     echo_app(vm);
 
