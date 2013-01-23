@@ -139,14 +139,14 @@ out:
     return SUCCESS;
 }
 
-#if 0
-//static int
-//vm_destruct(vm_t **old)
-//{
-//    /* TODO */
-//    return SUCCESS;
-//}
-#endif
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
+vm_destruct(vm_t *vm)
+{
+    if (NULL == vm) return ERR_INLD_INPUT;
+    /* XXX TODO */
+    return SUCCESS;
+}
 
 char *opstrs[32] = {
     "Conditional Move",
@@ -268,23 +268,19 @@ echo_app(vm_t *vm)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-int
-go(const char *what)
+static int
+load_app(vm_t *vm, const char *exe)
 {
     int fd = -1;
     ssize_t bread = 0;
     uint32_t ibuf = 0;
     int rc = SUCCESS;
-    vm_t *vm = NULL;
 
-    if (SUCCESS != (rc = vm_construct(&vm))) {
-        fprintf(stderr, "vm_construct error: %d\n", rc);
-        return rc;
-    }
+    if (NULL == vm || NULL == exe) return ERR_INLD_INPUT;
 
-    out("reading: %s\n", what);
+    out("o reading: %s\n", exe);
 
-    if (-1 == (fd = open(what, O_RDONLY))) {
+    if (-1 == (fd = open(exe, O_RDONLY))) {
         int err = errno;
         fprintf(stderr, "open failure: %d (%s)\n", err, strerror(err));
         return ERR_IO;
@@ -303,7 +299,6 @@ go(const char *what)
             goto out;
         }
         /* else all is well */
-        /* convert to big endian */
         if (SUCCESS != (rc = store_app(vm, ibuf))) {
             fprintf(stderr, "store_app failure: %d\n", rc);
             /* rc is set */
@@ -321,6 +316,37 @@ out:
         free(vm);
     }
     return rc;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
+run(vm_t *vm)
+{
+    /* TODO */
+    return SUCCESS;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
+go(const char *exe)
+{
+    int rc = SUCCESS;
+    vm_t *vm = NULL;
+
+    if (SUCCESS != (rc = vm_construct(&vm))) {
+        fprintf(stderr, "vm_construct error: %d\n", rc);
+        return rc;
+    }
+    if (SUCCESS != (rc = load_app(vm, exe))) {
+        /* rc is set */
+        goto out;
+    }
+    if (SUCCESS != (rc = run(vm))) {
+        goto out;
+    }
+
+out:
+    return vm_destruct(vm);
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
