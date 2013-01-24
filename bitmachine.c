@@ -161,6 +161,7 @@ vm_construct(vm_t **new)
     }
     tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(*tmp->addr_space));
     tmp->addr_space[0] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
+    tmp->addr_space[0][0].valid = true;
     tmp->app_size = 0;
     tmp->pc = 0;
     tmp->word_size = sizeof(uint32_t);
@@ -267,7 +268,6 @@ doop(vm_t *vm)
             if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
                 return ERR;
             }
-            out("got id: %d\n", id);
             vm->mr[regb] = id;
             break;
         }
