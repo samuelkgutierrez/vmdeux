@@ -225,6 +225,20 @@ alloc_array(vm_t *vm,
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
+static int
+dealloc_array(vm_t *vm,
+              uint32_t id)
+{
+    int i = id / AS_ARRAY_SIZE, j = id % AS_ARRAY_SIZE;
+    free(vm->addr_space[i][j].addp);
+    vm->addr_space[i][j].addp = NULL;
+    vm->addr_space[i][j].valid = false;
+    vm->addr_space[i][j].addp_len = 0;
+
+    return SUCCESS;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
 int
 doop(vm_t *vm)
 {
@@ -271,9 +285,12 @@ doop(vm_t *vm)
             vm->mr[regb] = id;
             break;
         }
-        case OP9:
-            out("(%08x) OP: %s\n", w, opstrs[9]);
+        case OP9: {
+            if (SUCCESS != dealloc_array(vm, vm->mr[regc])) {
+                return ERR;
+            }
             break;
+        }
         case OP10: {
             uint8_t out = vm->mr[regc] % 256;
             printf("%c", out);
