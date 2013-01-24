@@ -275,10 +275,12 @@ doop(vm_t *vm)
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
             break;
         }
-        case OP2:
-            out("(%08x) OP: %s\n", w, opstrs[2]);
-            /* ??? */
+        case OP2: {
+            int i, j;
+            get_array(vm, vm->mr[rega], &i, &j);
+            vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             break;
+        }
         case OP3:
             out("(%08x) OP: %s\n", w, opstrs[3]);
             break;
