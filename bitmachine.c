@@ -102,9 +102,9 @@ char *opstrs[32] = {
 };
 
 /* register masks */
-#define RA 0x00000007
+#define RA 0x000001C0
 #define RB 0x00000038
-#define RC 0x000001C0
+#define RC 0x00000007
 
 enum {
     SUCCESS = 0,
@@ -222,7 +222,7 @@ doop(vm_t *vm)
         case OP7:
             return HALT;
         case OP8:
-            printf("new array of %lu words\n", regc);
+            printf("new array of %lu words\n", vm->mr[regc]);
             break;
         case OP9:
             out("(%08x) OP: %s\n", w, opstrs[9]);
