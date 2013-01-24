@@ -226,6 +226,18 @@ alloc_array(vm_t *vm,
 
 /* ////////////////////////////////////////////////////////////////////////// */
 static int
+get_array(vm_t *vm,
+          uint32_t id,
+          int *i,
+          int *j)
+{
+    *i = id / AS_ARRAY_SIZE;
+    *j = id % AS_ARRAY_SIZE;
+    return SUCCESS;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
 dealloc_array(vm_t *vm,
               uint32_t id)
 {
@@ -257,6 +269,10 @@ doop(vm_t *vm)
             break;
         }
         case OP1: {
+            int i, j;
+            get_array(vm, vm->mr[regb], &i, &j);
+            /* XXX check bounds */
+            vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
             break;
         }
         case OP2:
