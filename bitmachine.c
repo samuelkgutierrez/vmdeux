@@ -26,9 +26,9 @@
 #include <stdbool.h>
 #include <errno.h>
 
-/* ////////////////////////////////////////////////////////////////////////// */
-
-/* ////////////////////////////////////////////////////////////////////////// */
+/* word layout */
+/* OP???????????RRRRRR */
+/* 0000 0000 0000 0000 */
 
 #define PACKAGE     "bitmachine"
 #define PACKAGE_VER "0.1"
@@ -100,9 +100,7 @@ char *opstrs[32] = {
     NULL
 };
 
-/* OP???????????RRRRRR */
-/* 0000 0000 0000 0000 */
-
+/* register masks */
 #define RA 0x00000007
 #define RB 0x00000038
 #define RC 0x000001C0
@@ -306,7 +304,7 @@ load_app(vm_t *vm, const char *exe)
         /* else all is well, so append word to program "0" array */
         /* NOTE: a small over allocation... just by one (so no malloc 0) */
         vm->words[0] = realloc(vm->words[0],
-                               (word_index + 1) * sizeof(uint32_t));
+                               (word_index + 1) * vm->word_size);
         vm->words[0][word_index++] = htonl(ibuf);
     }
     vm->app_size = word_index * vm->word_size;
