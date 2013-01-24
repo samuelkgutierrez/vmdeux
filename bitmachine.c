@@ -95,7 +95,7 @@ enum {
     ERR_OOR,
     ERR_IO,
     ERR_IOOB,
-    ERR_INLD_INPUT
+    ERR_INVLD_INPUT
 };
 
 /* machine registers */
@@ -125,7 +125,7 @@ vm_construct(vm_t **new)
     int rc = SUCCESS;
 
     if (NULL == new) {
-        rc = ERR_INLD_INPUT;
+        rc = ERR_INVLD_INPUT;
         goto out;
     }
     if (NULL == (tmp = calloc(4096, sizeof(*tmp)))) {
@@ -162,7 +162,7 @@ out:
 static int
 vm_destruct(vm_t *vm)
 {
-    if (NULL == vm) return ERR_INLD_INPUT;
+    if (NULL == vm) return ERR_INVLD_INPUT;
     /* XXX TODO */
     return SUCCESS;
 }
@@ -278,7 +278,7 @@ load_app(vm_t *vm, const char *exe)
     int rc = SUCCESS;
     size_t word_index = 0;
 
-    if (NULL == vm || NULL == exe) return ERR_INLD_INPUT;
+    if (NULL == vm || NULL == exe) return ERR_INVLD_INPUT;
 
     out("o reading: %s\n", exe);
 
