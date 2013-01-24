@@ -112,7 +112,8 @@ enum {
     ERR_OOR,
     ERR_IO,
     ERR_IOOB,
-    ERR_INVLD_INPUT
+    ERR_INVLD_INPUT,
+    HALT
 };
 
 typedef struct vm_t {
@@ -183,8 +184,10 @@ vm_destruct(vm_t *vm)
 
 /* ////////////////////////////////////////////////////////////////////////// */
 int
-doop(vm_t *vm, uint32_t w)
+doop(vm_t *vm)
 {
+    uint32_t w = vm->zero_array[vm->pc++];
+
     size_t rega = (w & RA);
     size_t regb = (w & RB);
     size_t regc = (w & RC);
@@ -217,8 +220,7 @@ doop(vm_t *vm, uint32_t w)
             out("(%08x) OP: %s\n", w, opstrs[6]);
             break;
         case OP7:
-            out("(%08x) OP: %s\n", w, opstrs[7]);
-            break;
+            return HALT;
         case OP8:
             out("(%08x) OP: %s\n", w, opstrs[8]);
             break;
@@ -251,27 +253,6 @@ doop(vm_t *vm, uint32_t w)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-/* TODO rename and update to provide simple disassembler functionality */
-int
-echo_app(vm_t *vm)
-{
-    size_t size = vm->app_size / vm->word_size;
-    size_t i;
-    out("o app size: %lu\n", (unsigned long)vm->app_size);
-    out("o max word index: %lu\n", (unsigned long)vm->max_index);
-
-    for (i = 0; i < size; ++i) {
-        printf("(%08x): OP: %08x REG: %08x\n",
-               vm->words[0][i],
-               vm->words[0][i] & OP_MASK,
-               vm->words[0][i] & REG_MASK);
-        doop(vm, vm->zero_array[i]);
-    }
-
-    return SUCCESS;
-}
-
-/* ////////////////////////////////////////////////////////////////////////// */
 static int
 load_app(vm_t *vm, const char *exe)
 {
@@ -282,8 +263,6 @@ load_app(vm_t *vm, const char *exe)
     size_t word_index = 0;
 
     if (NULL == vm || NULL == exe) return ERR_INVLD_INPUT;
-
-    out("o reading: %s\n", exe);
 
     if (-1 == (fd = open(exe, O_RDONLY))) {
         int err = errno;
@@ -323,11 +302,18 @@ out:
 static int
 run(vm_t *vm)
 {
-    int i;
-    for (i = 0; i < vm->app_size / vm->word_size; ++i) {
-        doop(vm, vm->zero_array[i]);
+    int rc;
+
+    while (true) {
+        rc = doop(vm);
+        if (SUCCESS != rc) {
+            if (HALT == rc) {
+                rc = SUCCESS;
+            }
+            break;
+        }
     }
-    return SUCCESS;
+    return rc;
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
