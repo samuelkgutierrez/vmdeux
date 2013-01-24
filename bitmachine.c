@@ -115,18 +115,13 @@ enum {
     ERR_INVLD_INPUT
 };
 
-/* machine registers */
-typedef struct registers_t {
-    uint32_t r[N_REGISTERS];
-} registers_t;
-
 typedef struct vm_t {
     /* size of application image */
     size_t app_size;
     /* sizeof machine word */
     size_t word_size;
     /* machine registers */
-    registers_t mr;
+    uint32_t mr[N_REGISTERS];
     /* program counter */
     uint32_t pc;
     uint32_t *zero_array;
@@ -239,9 +234,15 @@ doop(vm_t *vm, uint32_t w)
         case OP12:
             out("(%08x) OP: %s\n", w, opstrs[12]);
             break;
-        case OP13:
-            out("(%08x) OP: %s\n", w, opstrs[13]);
+        case OP13: {
+            /* this op is special */
+            uint32_t val = w & 0x000000FFFFFF;
+            /* 0x000007000000 describes the target register id */
+            vm->mr[w & 0x000007000000] = val;
+            out("-- OP13: storing %lu into register %d\n",
+                (unsigned long)val, (int)w & 0x000007000000);
             break;
+        }
         default:
             return ERR_IOOB;
     }
