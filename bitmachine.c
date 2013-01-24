@@ -66,6 +66,7 @@ do {                                                                           \
 
 #define MEM_MAX_INDEX ( 1 << 9 )
 #define WORD_MAX_INDEX 4096
+#define ID_ARRAY_START_SIZE 4096
 
 #define OP0  0x00000000
 #define OP1  0x10000000
@@ -127,8 +128,8 @@ typedef struct vm_t {
     uint32_t pc;
     uint32_t *zero_array;
     uint32_t **words;
-    uint32_t *memory;
-    size_t max_index;
+    uint32_t array_id_size;
+    bool *array_id_avail;
 } vm_t;
 
 
@@ -152,14 +153,14 @@ vm_construct(vm_t **new)
         rc = ERR_OOR;
         goto out;
     }
-    if (NULL == (tmp->memory = calloc(MEM_MAX_INDEX, sizeof(*tmp->memory)))) {
-        rc = ERR_OOR;
-        goto out;
-    }
+    tmp->array_id_avail = malloc(ID_ARRAY_START_SIZE *
+                                 sizeof(*tmp->array_id_avail));
+    memset(tmp->array_id_avail, 1,
+           ID_ARRAY_START_SIZE * sizeof(*tmp->array_id_avail));
+    tmp->array_id_size = ID_ARRAY_START_SIZE;
     tmp->app_size = 0;
-    tmp->max_index = WORD_MAX_INDEX;
-    tmp->word_size = sizeof(uint32_t);
     tmp->pc = 0;
+    tmp->word_size = sizeof(uint32_t);
 
     /* XXX cleanup */
 
@@ -183,6 +184,37 @@ vm_destruct(vm_t *vm)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
+static uint32_t
+find_avail_id(vm_t *vm)
+{
+    uint32_t i;
+    unsigned char *new_half_base = NULL;
+
+    for (i = 0; i < vm->array_id_size; ++i) {
+        if (vm->array_id_avail[i]) {
+            vm->array_id_avail[i] = false;
+            return i;
+        }
+    }
+    /* else all is taken, so realloc the thing */
+    /* XXX TODO */
+    return -1;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
+alloc_array(vm_t *vm,
+            size_t nwords,
+            uint32_t *id)
+{
+    *id = find_avail_id(vm);
+    vm->words[*id] = calloc(nwords, vm->word_size);
+
+    return SUCCESS;
+
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
 int
 doop(vm_t *vm)
 {
@@ -194,10 +226,6 @@ doop(vm_t *vm)
 
     switch (w & OP_MASK) {
         case OP0:
-            out("(%08x) OP: %s\n", w, opstrs[0]);
-            if (0 == vm->memory[regc]) {
-                vm->memory[rega] = vm->memory[regb];
-            }
             break;
         case OP1:
             out("(%08x) OP: %s\n", w, opstrs[1]);
@@ -221,9 +249,15 @@ doop(vm_t *vm)
             break;
         case OP7:
             return HALT;
-        case OP8:
-            printf("new array of %lu words\n", vm->mr[regc]);
+        case OP8: {
+            uint32_t id = 0;
+            if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
+                return ERR;
+            }
+            out("got id: %d\n", id);
+            vm->mr[regb] = id;
             break;
+        }
         case OP9:
             out("(%08x) OP: %s\n", w, opstrs[9]);
             break;
