@@ -82,6 +82,24 @@ do {                                                                           \
 #define OP13 0xD0000000
 #define OP14 0xE0000000
 
+char *opstrs[32] = {
+    "Conditional Move",
+    "Array Index",
+    "Array Update",
+    "Addition",
+    "Multiplication",
+    "Division",
+    "Nand",
+    "Halt",
+    "Allocation",
+    "Deallocation",
+    "Output",
+    "Input",
+    "Load Program",
+    "Load Immediate",
+    NULL
+};
+
 /* OP???????????RRRRRR */
 /* 0000 0000 0000 0000 */
 
@@ -110,6 +128,8 @@ typedef struct vm_t {
     size_t word_size;
     /* machine registers */
     registers_t mr;
+    /* program counter */
+    uint32_t pc;
     uint32_t *zero_array;
     uint32_t **words;
     uint32_t *memory;
@@ -145,6 +165,7 @@ vm_construct(vm_t **new)
     tmp->max_index = WORD_MAX_INDEX;
     tmp->zero_array = tmp->words[0];
     tmp->word_size = sizeof(uint32_t);
+    tmp->pc = 0;
 
     /* XXX cleanup */
 
@@ -166,24 +187,6 @@ vm_destruct(vm_t *vm)
     /* XXX TODO */
     return SUCCESS;
 }
-
-char *opstrs[32] = {
-    "Conditional Move",
-    "Array Index",
-    "Array Update",
-    "Addition",
-    "Multiplication",
-    "Division",
-    "Nand",
-    "Halt",
-    "Allocation",
-    "Deallocation",
-    "Output",
-    "Input",
-    "Load Program",
-    "Load Immediate",
-    NULL
-};
 
 /* ////////////////////////////////////////////////////////////////////////// */
 int
