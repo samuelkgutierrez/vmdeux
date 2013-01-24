@@ -222,7 +222,7 @@ doop(vm_t *vm)
         case OP7:
             return HALT;
         case OP8:
-            out("(%08x) OP: %s\n", w, opstrs[8]);
+            printf("new array of %lu words\n", regc);
             break;
         case OP9:
             out("(%08x) OP: %s\n", w, opstrs[9]);
@@ -240,9 +240,15 @@ doop(vm_t *vm)
             break;
         case OP13: {
             /* this op is special */
-            uint32_t val = w & 0x000000FFFFFF;
-            /* 0x000007000000 describes the target register id */
-            vm->mr[w & 0x000007000000] = val;
+            uint32_t val = w & 0x01FFFFFF;
+            uint32_t index = ((w & 0x0E000000) >> 25);
+            /*
+            00000000000000000000000000000000
+                   1111111111111111111111111 - value
+                1110000000000000000000000000 - reg id
+            11110000000000000000000000000000 - op
+            */
+            vm->mr[index] = val;
             break;
         }
         default:
