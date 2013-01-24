@@ -127,9 +127,6 @@ typedef struct vm_t {
     /* program counter */
     uint32_t pc;
     uint32_t *zero_array;
-    uint32_t **words;
-    uint32_t array_id_size;
-    bool *array_id_avail;
 } vm_t;
 
 
@@ -149,15 +146,11 @@ vm_construct(vm_t **new)
         goto out;
     }
     /* XXX update max to grow */
-    if (NULL == (tmp->words = calloc(WORD_MAX_INDEX, sizeof(*tmp->words)))) {
+    if (NULL == (tmp->zero_array = calloc(WORD_MAX_INDEX,
+                                          sizeof(*tmp->zero_array)))) {
         rc = ERR_OOR;
         goto out;
     }
-    tmp->array_id_avail = malloc(ID_ARRAY_START_SIZE *
-                                 sizeof(*tmp->array_id_avail));
-    memset(tmp->array_id_avail, 1,
-           ID_ARRAY_START_SIZE * sizeof(*tmp->array_id_avail));
-    tmp->array_id_size = ID_ARRAY_START_SIZE;
     tmp->app_size = 0;
     tmp->pc = 0;
     tmp->word_size = sizeof(uint32_t);
@@ -187,18 +180,7 @@ vm_destruct(vm_t *vm)
 static uint32_t
 find_avail_id(vm_t *vm)
 {
-    uint32_t i;
-    unsigned char *new_half_base = NULL;
-
-    for (i = 0; i < vm->array_id_size; ++i) {
-        if (vm->array_id_avail[i]) {
-            vm->array_id_avail[i] = false;
-            return i;
-        }
-    }
-    /* else all is taken, so realloc the thing */
-    /* XXX TODO */
-    return -1;
+    return SUCCESS;
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -208,7 +190,6 @@ alloc_array(vm_t *vm,
             uint32_t *id)
 {
     *id = find_avail_id(vm);
-    vm->words[*id] = calloc(nwords, vm->word_size);
 
     return SUCCESS;
 
@@ -220,17 +201,21 @@ doop(vm_t *vm)
 {
     uint32_t w = vm->zero_array[vm->pc++];
 
+    /* machine register index */
     size_t rega = (w & RA);
     size_t regb = (w & RB);
     size_t regc = (w & RC);
 
     switch (w & OP_MASK) {
-        case OP0:
+        case OP0: {
+            if (0 != vm->mr[regc]) {
+                vm->mr[rega] = vm->mr[regb];
+            }
             break;
-        case OP1:
-            out("(%08x) OP: %s\n", w, opstrs[1]);
-            /* ??? */
+        }
+        case OP1: {
             break;
+        }
         case OP2:
             out("(%08x) OP: %s\n", w, opstrs[2]);
             /* ??? */
@@ -324,10 +309,9 @@ load_app(vm_t *vm, const char *exe)
         }
         /* else all is well, so append word to program "0" array */
         /* NOTE: a small over allocation... just by one (so no malloc 0) */
-        vm->words[0] = realloc(vm->words[0],
-                               (word_index + 1) * vm->word_size);
-        vm->words[0][word_index++] = htonl(ibuf);
-        vm->zero_array = vm->words[0];
+        vm->zero_array = realloc(vm->zero_array,
+                                 (word_index + 1) * vm->word_size);
+        vm->zero_array[word_index++] = htonl(ibuf);
     }
     vm->app_size = word_index * vm->word_size;
 
