@@ -66,7 +66,7 @@ do {                                                                           \
 
 #define MEM_MAX_INDEX ( 1 << 9 )
 #define WORD_MAX_INDEX 4096
-#define ID_ARRAY_START_SIZE 4096
+#define AS_ARRAY_SIZE ( 1 << 16 )
 
 #define OP0  0x00000000
 #define OP1  0x10000000
@@ -117,6 +117,13 @@ enum {
     HALT
 };
 
+/* address space item typedef'd stuct */
+typedef struct asi_t {
+    bool valid;
+    uint32_t *addp;
+    size_t addp_len;
+} asi_t;
+
 typedef struct vm_t {
     /* size of application image */
     size_t app_size;
@@ -127,6 +134,7 @@ typedef struct vm_t {
     /* program counter */
     uint32_t pc;
     uint32_t *zero_array;
+    asi_t **addr_space;
 } vm_t;
 
 
@@ -151,6 +159,8 @@ vm_construct(vm_t **new)
         rc = ERR_OOR;
         goto out;
     }
+    tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(*tmp->addr_space));
+    tmp->addr_space[0] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
     tmp->app_size = 0;
     tmp->pc = 0;
     tmp->word_size = sizeof(uint32_t);
@@ -180,7 +190,21 @@ vm_destruct(vm_t *vm)
 static uint32_t
 find_avail_id(vm_t *vm)
 {
-    return SUCCESS;
+    int i, j;
+
+    for (i = 0; i < AS_ARRAY_SIZE; ++i) {
+        for (j = 0; j < AS_ARRAY_SIZE; ++j) {
+            if (NULL == vm->addr_space[i]) {
+                vm->addr_space[i] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
+            }
+            if (!vm->addr_space[i][j].valid) {
+                vm->addr_space[i][j].valid = true;
+                return (i * AS_ARRAY_SIZE) + j;
+            }
+        }
+    }
+    /* XXX FIXME */
+    return -1;
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -189,7 +213,11 @@ alloc_array(vm_t *vm,
             size_t nwords,
             uint32_t *id)
 {
+    /* XXX make sure we have a valid id from find_avail_id */
     *id = find_avail_id(vm);
+    int i = *id / AS_ARRAY_SIZE, j = *id % AS_ARRAY_SIZE;
+    vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
+    vm->addr_space[i][j].addp_len = nwords;
 
     return SUCCESS;
 
