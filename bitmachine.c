@@ -225,9 +225,11 @@ doop(vm_t *vm, uint32_t w)
         case OP9:
             out("(%08x) OP: %s\n", w, opstrs[9]);
             break;
-        case OP10:
-            out("(%08x) OP: %s\n", w, opstrs[10]);
+        case OP10: {
+            uint8_t out = vm->mr[regc] % 256;
+            printf("%c", out);
             break;
+        }
         case OP11:
             out("(%08x) OP: %s\n", w, opstrs[11]);
             break;
@@ -239,8 +241,6 @@ doop(vm_t *vm, uint32_t w)
             uint32_t val = w & 0x000000FFFFFF;
             /* 0x000007000000 describes the target register id */
             vm->mr[w & 0x000007000000] = val;
-            out("-- OP13: storing %lu into register %d\n",
-                (unsigned long)val, (int)w & 0x000007000000);
             break;
         }
         default:
