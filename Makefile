@@ -1,7 +1,7 @@
 SHELL  = /bin/sh
 TARGET = bitmachine
 #CFLAGS = -Wall -DNDEBUG
-CFLAGS = -Wall
+CFLAGS = -Wall -g -O0
 
 .SUFFIXES:
 .SUFFIXES: .c .o

@@ -60,7 +60,8 @@ do {                                                                           \
 } while (0)
 #endif
 
-#define OP_MASK  0xFF000000
+/* opcode is given by the bits 28:31 */
+#define OP_MASK  0xF0000000
 #define REG_MASK 0x000001FF
 
 #define MEM_MAX_INDEX ( 1 << 9 )
@@ -161,7 +162,6 @@ vm_construct(vm_t **new)
     }
     tmp->app_size = 0;
     tmp->max_index = WORD_MAX_INDEX;
-    tmp->zero_array = tmp->words[0];
     tmp->word_size = sizeof(uint32_t);
     tmp->pc = 0;
 
@@ -188,7 +188,7 @@ vm_destruct(vm_t *vm)
 
 /* ////////////////////////////////////////////////////////////////////////// */
 int
-doop(uint32_t w, vm_t *vm)
+doop(vm_t *vm, uint32_t w)
 {
     size_t rega = (w & RA);
     size_t regb = (w & RB);
@@ -250,6 +250,7 @@ doop(uint32_t w, vm_t *vm)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
+/* TODO rename and update to provide simple disassembler functionality */
 int
 echo_app(vm_t *vm)
 {
@@ -263,7 +264,7 @@ echo_app(vm_t *vm)
                vm->words[0][i],
                vm->words[0][i] & OP_MASK,
                vm->words[0][i] & REG_MASK);
-        doop(vm->words[0][i], vm);
+        doop(vm, vm->zero_array[i]);
     }
 
     return SUCCESS;
@@ -306,17 +307,13 @@ load_app(vm_t *vm, const char *exe)
         vm->words[0] = realloc(vm->words[0],
                                (word_index + 1) * vm->word_size);
         vm->words[0][word_index++] = htonl(ibuf);
+        vm->zero_array = vm->words[0];
     }
     vm->app_size = word_index * vm->word_size;
-
-    echo_app(vm);
 
 out:
     if (-1 != fd) {
         close(fd);
-    }
-    if (NULL != vm) {
-        free(vm);
     }
     return rc;
 }
@@ -325,7 +322,10 @@ out:
 static int
 run(vm_t *vm)
 {
-    /* TODO */
+    int i;
+    for (i = 0; i < vm->app_size / vm->word_size; ++i) {
+        doop(vm, vm->zero_array[i]);
+    }
     return SUCCESS;
 }
 
