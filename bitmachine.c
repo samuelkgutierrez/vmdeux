@@ -119,7 +119,7 @@ enum {
 
 /* address space item typedef'd stuct */
 typedef struct asi_t {
-    bool valid;
+    bool used;
     uint32_t *addp;
     size_t addp_len;
 } asi_t;
@@ -161,7 +161,7 @@ vm_construct(vm_t **new)
     }
     tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(*tmp->addr_space));
     tmp->addr_space[0] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
-    tmp->addr_space[0][0].valid = true;
+    tmp->addr_space[0][0].used = true;
     tmp->app_size = 0;
     tmp->pc = 0;
     tmp->word_size = sizeof(uint32_t);
@@ -198,8 +198,8 @@ find_avail_id(vm_t *vm)
             if (NULL == vm->addr_space[i]) {
                 vm->addr_space[i] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
             }
-            if (!vm->addr_space[i][j].valid) {
-                vm->addr_space[i][j].valid = true;
+            if (!vm->addr_space[i][j].used) {
+                vm->addr_space[i][j].used = true;
                 return (i * AS_ARRAY_SIZE) + j;
             }
         }
@@ -214,7 +214,7 @@ alloc_array(vm_t *vm,
             size_t nwords,
             uint32_t *id)
 {
-    /* XXX make sure we have a valid id from find_avail_id */
+    /* XXX make sure we have a used id from find_avail_id */
     *id = find_avail_id(vm);
     int i = *id / AS_ARRAY_SIZE, j = *id % AS_ARRAY_SIZE;
     vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
@@ -244,7 +244,7 @@ dealloc_array(vm_t *vm,
     int i = id / AS_ARRAY_SIZE, j = id % AS_ARRAY_SIZE;
     free(vm->addr_space[i][j].addp);
     vm->addr_space[i][j].addp = NULL;
-    vm->addr_space[i][j].valid = false;
+    vm->addr_space[i][j].used = false;
     vm->addr_space[i][j].addp_len = 0;
 
     return SUCCESS;
