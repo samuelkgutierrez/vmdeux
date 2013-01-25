@@ -266,8 +266,8 @@ doop(vm_t *vm)
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
-            out("[%08x] %s: %lu ==> %d, %d\n", w, opstrs[2],
-                (unsigned long)vm->mr[regb], i, j);
+            out("[%08x] %s: rA == %lu ==> %d, %d\n", w, opstrs[2],
+                (unsigned long)vm->mr[rega], i, j);
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             break;
         }
