@@ -197,7 +197,7 @@ alloc_array(vm_t *vm,
 {
     /* XXX make sure we have a used id from find_avail_id */
     *id = find_avail_id(vm);
-    int i = *id / AS_ARRAY_SIZE, j = *id % AS_ARRAY_SIZE;
+    int i = (*id / AS_ARRAY_SIZE), j = (*id % AS_ARRAY_SIZE);
     vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
     vm->addr_space[i][j].addp_len = nwords;
 
@@ -245,13 +245,20 @@ doop(vm_t *vm)
     switch (w & OP_MASK) {
         case OP0: {
             if (0 != vm->mr[regc]) {
+                out("[%08x] %s: reg %lu != 0, so setting reg %lu to %lu\n", w,
+                    opstrs[0], (unsigned long)regc, (unsigned long)rega,
+                    (unsigned long)vm->mr[regb]);
                 vm->mr[rega] = vm->mr[regb];
             }
+            out("[%08x] %s: reg %lu == 0, so doing nothing\n", w, opstrs[0],
+                (unsigned long)regc);
             break;
         }
         case OP1: {
             int i, j;
             get_array(vm, vm->mr[regb], &i, &j);
+            out("[%08x] %s: %lu ==> %d, %d\n", w, opstrs[1],
+                (unsigned long)vm->mr[regb], i, j);
             /* XXX check bounds */
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
             break;
@@ -259,6 +266,8 @@ doop(vm_t *vm)
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
+            out("[%08x] %s: %lu ==> %d, %d\n", w, opstrs[2],
+                (unsigned long)vm->mr[regb], i, j);
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             break;
         }
@@ -275,6 +284,7 @@ doop(vm_t *vm)
             out("(%08x) OP: %s\n", w, opstrs[6]);
             break;
         case OP7:
+            out("[%08x] %s:\n", w, opstrs[7]);
             return HALT;
         case OP8: {
             uint32_t id = 0;
@@ -282,12 +292,15 @@ doop(vm_t *vm)
                 return ERR;
             }
             vm->mr[regb] = id;
+            out("[%08x] %s: # words: %lu setting reg %d to %lu\n", w, opstrs[8],
+                (unsigned long)vm->mr[regc], (int)regc, (unsigned long)id);
             break;
         }
         case OP9: {
             if (SUCCESS != dealloc_array(vm, vm->mr[regc])) {
                 return ERR;
             }
+            out("[%08x] %s: %lu\n", w, opstrs[9], (unsigned long)vm->mr[regc]);
             break;
         }
         case OP10: {
@@ -312,6 +325,7 @@ doop(vm_t *vm)
             }
             free(vm->zero_array);
             vm->zero_array = tmp_zarray;
+            /* XXX add the last part of the op */
             out("[%08x] %s\n", w, opstrs[12]);
             break;
         }
