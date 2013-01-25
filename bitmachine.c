@@ -26,14 +26,8 @@
 #include <stdbool.h>
 #include <errno.h>
 
-/* word layout */
-/* OP???????????RRRRRR */
-/* 0000 0000 0000 0000 */
-
 #define PACKAGE     "bitmachine"
 #define PACKAGE_VER "0.1"
-
-#define N_REGISTERS 8
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x)  STRINGIFY(x)
@@ -64,8 +58,8 @@ do {                                                                           \
 #define OP_MASK  0xF0000000
 #define REG_MASK 0x000001FF
 
+#define N_REGISTERS 8
 #define MEM_MAX_INDEX ( 1 << 9 )
-#define WORD_MAX_INDEX 4096
 #define AS_ARRAY_SIZE ( 1 << 16 )
 
 #define OP0  0x00000000
@@ -143,38 +137,25 @@ static int
 vm_construct(vm_t **new)
 {
     vm_t *tmp = NULL;
-    int rc = SUCCESS;
 
     if (NULL == new) {
-        rc = ERR_INVLD_INPUT;
-        goto out;
+        return ERR_INVLD_INPUT;
     }
-    if (NULL == (tmp = calloc(4096, sizeof(*tmp)))) {
-        rc = ERR_OOR;
-        goto out;
+    if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
+        /* fail -- just bail */
+        return ERR_OOR;
     }
-    /* XXX update max to grow */
-    if (NULL == (tmp->zero_array = calloc(WORD_MAX_INDEX,
-                                          sizeof(*tmp->zero_array)))) {
-        rc = ERR_OOR;
-        goto out;
-    }
-    tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(*tmp->addr_space));
+    /* this will get filled in later */
+    tmp->app_size = 0;
+    tmp->word_size = sizeof(uint32_t);
+    tmp->pc = 0;
+    tmp->zero_array = NULL;
+    tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(asi_t *));
     tmp->addr_space[0] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
     tmp->addr_space[0][0].used = true;
-    tmp->app_size = 0;
-    tmp->pc = 0;
-    tmp->word_size = sizeof(uint32_t);
 
-    /* XXX cleanup */
-
-out:
-    /* failure */
-    if (SUCCESS != rc) {
-        if (tmp) {
-        }
-    }
     *new = tmp;
+
     return SUCCESS;
 }
 
