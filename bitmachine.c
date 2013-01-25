@@ -298,9 +298,23 @@ doop(vm_t *vm)
         case OP11:
             out("(%08x) OP: %s\n", w, opstrs[11]);
             break;
-        case OP12:
-            out("(%08x) OP: %s\n", w, opstrs[12]);
+        case OP12: {
+            int i = 0, j = 0;
+            uint32_t *tmp_zarray = NULL;
+            size_t len = 0, k = 0;
+
+            get_array(vm, vm->mr[regb], &i, &j);
+            len = vm->addr_space[i][j].addp_len;
+            /* XXX memcpy */
+            tmp_zarray = calloc(len, sizeof(uint32_t));
+            for (k = 0; k < len; ++k) {
+                tmp_zarray[k] = vm->addr_space[i][j].addp[k];
+            }
+            free(vm->zero_array);
+            vm->zero_array = tmp_zarray;
+            out("[%08x] %s\n", w, opstrs[12]);
             break;
+        }
         case OP13: {
             /* this op is special */
             uint32_t val = w & 0x01FFFFFF;
@@ -312,9 +326,12 @@ doop(vm_t *vm)
             11110000000000000000000000000000 - op
             */
             vm->mr[index] = val;
+            out("[%08x] %s: setting reg %lu to %lu\n", w, opstrs[13],
+                (unsigned long)index, (unsigned long)val);
             break;
         }
         default:
+            out("INVALID OP!\n");
             return ERR_IOOB;
     }
 
