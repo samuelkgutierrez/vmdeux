@@ -286,18 +286,30 @@ doop(vm_t *vm)
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             break;
         }
-        case OP3:
-            out("(%08x) OP: %s\n", w, opstrs[3]);
+        case OP3: {
+            vm->mr[rega] = (vm->mr[regb] + vm->mr[regc]) % ((1 << 32));
+            out("[%08x] %s: %lu = (%lu + %lu) %% %lu\n", w, opstrs[3],
+                (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
+                (unsigned long)vm->mr[regc], ((1 << 32)));
             break;
-        case OP4:
-            out("(%08x) OP: %s\n", w, opstrs[4]);
+        }
+        case OP4: {
+            vm->mr[rega] = (vm->mr[regb] * vm->mr[regc]) % ((1 << 32));
+            out("[%08x] %s: %lu = (%lu * %lu) %% %lu\n", w, opstrs[4],
+                (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
+                (unsigned long)vm->mr[regc], ((1 << 32)));
             break;
-        case OP5:
-            out("(%08x) OP: %s\n", w, opstrs[5]);
+        }
+        case OP5: {
+            vm->mr[rega] = (vm->mr[regb] / vm->mr[regc]);
+            out("[%08x] %s: %lu = (%lu / %lu)\n", w, opstrs[5],
+                (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
+                (unsigned long)vm->mr[regc]);
             break;
-        case OP6:
-            out("(%08x) OP: %s\n", w, opstrs[6]);
+        }
+        case OP6: {
             break;
+        }
         case OP7:
             out("[%08x] %s:\n", w, opstrs[7]);
             return HALT;
@@ -334,6 +346,7 @@ doop(vm_t *vm)
 
             get_array(vm, vm->mr[regb], &i, &j);
             len = vm->addr_space[i][j].addp_len;
+            /* if we are given the zero array, there is nothing to do */
             if (0 != vm->mr[regb]) {
                 tmp_zarray = calloc(len, sizeof(uint32_t));
                 for (k = 0; k < len; ++k) {
@@ -342,6 +355,7 @@ doop(vm_t *vm)
                 free(vm->zero_array);
                 vm->zero_array = tmp_zarray;
             }
+            /* else we are dealing with the current zero array */
             vm->pc = vm->mr[regc];
             out("[%08x] %s: dup'ing %lu [%d, %d] "
                 "and replacing zero array. pc set to %lu\n",
