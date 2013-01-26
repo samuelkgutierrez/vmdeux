@@ -127,7 +127,9 @@ typedef struct vm_t {
     uint32_t mr[N_REGISTERS];
     /* program counter */
     uint32_t pc;
+    /* points to zero array */
     uint32_t *zero_array;
+    /*address space */
     asi_t **addr_space;
 } vm_t;
 
@@ -152,6 +154,7 @@ vm_construct(vm_t **new)
     tmp->zero_array = NULL;
     tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(asi_t *));
     tmp->addr_space[0] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
+    /* mark as used because we don't want any zero array confusion madness */
     tmp->addr_space[0][0].used = true;
 
     *new = tmp;
@@ -176,11 +179,16 @@ find_avail_id(vm_t *vm)
 
     for (i = 0; i < AS_ARRAY_SIZE; ++i) {
         for (j = 0; j < AS_ARRAY_SIZE; ++j) {
+            /* we are on to a new array */
             if (NULL == vm->addr_space[i]) {
+                out("           %s: creating new asi_t array @ %d\n", __func__,
+                    i);
                 vm->addr_space[i] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
             }
             if (!vm->addr_space[i][j].used) {
                 vm->addr_space[i][j].used = true;
+                out("           %s: found unused spot @ %d %d returned %d\n",
+                    __func__, i, j, (i * AS_ARRAY_SIZE) + j);
                 return (i * AS_ARRAY_SIZE) + j;
             }
         }
@@ -201,6 +209,9 @@ alloc_array(vm_t *vm,
     vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
     vm->addr_space[i][j].addp_len = nwords;
 
+    out("           %s: id %lu allocating %lu words @ [%d, %d]\n",
+        __func__, (unsigned long)*id, (unsigned long)nwords, i, j);
+
     return SUCCESS;
 
 }
@@ -212,8 +223,12 @@ get_array(vm_t *vm,
           int *i,
           int *j)
 {
-    *i = id / AS_ARRAY_SIZE;
-    *j = id % AS_ARRAY_SIZE;
+    *i = (id / AS_ARRAY_SIZE);
+    *j = (id % AS_ARRAY_SIZE);
+
+    out("           %s: id %lu ==> [%d, %d]\n", __func__,
+        (unsigned long)id, *i, *j);
+
     return SUCCESS;
 }
 
@@ -265,9 +280,9 @@ doop(vm_t *vm)
         }
         case OP2: {
             int i, j;
-            get_array(vm, vm->mr[rega], &i, &j);
-            out("[%08x] %s: rA == %lu ==> %d, %d\n", w, opstrs[2],
-                (unsigned long)vm->mr[rega], i, j);
+            get_array(vm, rega, &i, &j);
+            out("[%08x] %s: rA's id: %lu @ [%d, %d]\n", w, opstrs[2],
+                (unsigned long)rega, i, j);
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             break;
         }
@@ -288,12 +303,12 @@ doop(vm_t *vm)
             return HALT;
         case OP8: {
             uint32_t id = 0;
-            if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
+            if (SUCCESS != alloc_array(vm, regc, &id)) {
                 return ERR;
             }
             vm->mr[regb] = id;
             out("[%08x] %s: # words: %lu setting reg %d to %lu\n", w, opstrs[8],
-                (unsigned long)vm->mr[regc], (int)regc, (unsigned long)id);
+                (unsigned long)regc, (int)regc, (unsigned long)id);
             break;
         }
         case OP9: {
