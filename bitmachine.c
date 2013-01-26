@@ -253,8 +253,8 @@ doop(vm_t *vm)
     uint32_t w = vm->zero_array[vm->pc++];
 
     /* machine register index */
-    size_t rega = (w & RA);
-    size_t regb = (w & RB);
+    size_t rega = (w & RA) >> 6;
+    size_t regb = (w & RB) >> 3;
     size_t regc = (w & RC);
 
     switch (w & OP_MASK) {
@@ -280,9 +280,9 @@ doop(vm_t *vm)
         }
         case OP2: {
             int i, j;
-            get_array(vm, rega, &i, &j);
+            get_array(vm, vm->mr[rega], &i, &j);
             out("[%08x] %s: rA's id: %lu @ [%d, %d]\n", w, opstrs[2],
-                (unsigned long)rega, i, j);
+                (unsigned long)vm->mr[rega], i, j);
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             break;
         }
@@ -303,12 +303,13 @@ doop(vm_t *vm)
             return HALT;
         case OP8: {
             uint32_t id = 0;
-            if (SUCCESS != alloc_array(vm, regc, &id)) {
+            if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
                 return ERR;
             }
             vm->mr[regb] = id;
-            out("[%08x] %s: # words: %lu setting reg %d to %lu\n", w, opstrs[8],
-                (unsigned long)regc, (int)regc, (unsigned long)id);
+            out("[%08x] %s: alloc'd %lu words setting reg %d to %lu\n", w,
+                opstrs[8], (unsigned long)vm->mr[regc], (int)vm->mr[regb],
+                (unsigned long)id);
             break;
         }
         case OP9: {
