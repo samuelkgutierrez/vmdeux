@@ -253,9 +253,9 @@ doop(vm_t *vm)
     uint32_t w = vm->zero_array[vm->pc++];
 
     /* machine register index */
-    size_t rega = (w & RA) >> 6;
-    size_t regb = (w & RB) >> 3;
-    size_t regc = (w & RC);
+    size_t rega = (w & RA) >> 6; /* 6:8 */
+    size_t regb = (w & RB) >> 3; /* 3:5 */
+    size_t regc = (w & RC);      /* 0:2 */
 
     switch (w & OP_MASK) {
         case OP0: {
@@ -334,15 +334,19 @@ doop(vm_t *vm)
 
             get_array(vm, vm->mr[regb], &i, &j);
             len = vm->addr_space[i][j].addp_len;
-            /* XXX memcpy */
-            tmp_zarray = calloc(len, sizeof(uint32_t));
-            for (k = 0; k < len; ++k) {
-                tmp_zarray[k] = vm->addr_space[i][j].addp[k];
+            if (0 != vm->mr[regb]) {
+                tmp_zarray = calloc(len, sizeof(uint32_t));
+                for (k = 0; k < len; ++k) {
+                    tmp_zarray[k] = vm->addr_space[i][j].addp[k];
+                }
+                free(vm->zero_array);
+                vm->zero_array = tmp_zarray;
             }
-            free(vm->zero_array);
-            vm->zero_array = tmp_zarray;
-            /* XXX add the last part of the op */
-            out("[%08x] %s\n", w, opstrs[12]);
+            vm->pc = vm->mr[regc];
+            out("[%08x] %s: dup'ing %lu [%d, %d] "
+                "and replacing zero array. pc set to %lu\n",
+                w, opstrs[12], (unsigned long)vm->mr[regb], i, j,
+                (unsigned long)vm->mr[regc]);
             break;
         }
         case OP13: {
