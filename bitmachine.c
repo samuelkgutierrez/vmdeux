@@ -276,9 +276,10 @@ doop(vm_t *vm)
             if (0 != vm->mr[regc]) {
                 vm->mr[rega] = vm->mr[regb];
             }
-            out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8"\n",
+            out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[0],
-                rega, regb, regc);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
         }
         case OP1: {
@@ -373,9 +374,19 @@ doop(vm_t *vm)
             break;
         }
         case OP11: {
-            out("%08x %08x %010lu %s %"PRIu32"\n",
-                vm->pc, w, (unsigned long)vm->pc, opstrs[9],
-                regc);
+            char inputbuf[8];
+            int val = 0;
+            memset(inputbuf, '\0', sizeof(inputbuf));
+            fgets(inputbuf, sizeof(inputbuf), stdin);
+            val = (int)strtoul(inputbuf, NULL, 10);
+            if (val < 0 || val > 255) {
+                return ERR;
+            }
+            vm->mr[regc] = (uint8_t)val;
+            w |= 0x00000007;
+            printf("%08x %08x %010lu %s %"PRIu32" [0x%08x]\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[11],
+                regc, vm->mr[regc]);
             break;
         }
         case OP12: {
