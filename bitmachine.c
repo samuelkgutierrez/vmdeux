@@ -272,10 +272,10 @@ doop(vm_t *vm)
         case OP1: {
             int i, j;
             get_array(vm, vm->mr[regb], &i, &j);
-            out("[%08x] %s: %lu ==> %d, %d\n", w, opstrs[1],
-                (unsigned long)vm->mr[regb], i, j);
             /* XXX check bounds */
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
+            out("[%08x] %s: MR @ %d = [%d][%d] @ OFFSET %lu\n", w, opstrs[1], 
+                (int)regb, i, j, (unsigned long)vm->mr[regc]);
             break;
         }
         case OP2: {
@@ -287,27 +287,36 @@ doop(vm_t *vm)
             break;
         }
         case OP3: {
-            vm->mr[rega] = (vm->mr[regb] + vm->mr[regc]) % ((1 << 32));
+            vm->mr[rega] = (vm->mr[regb] + vm->mr[regc]);
             out("[%08x] %s: %lu = (%lu + %lu) %% %lu\n", w, opstrs[3],
                 (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
-                (unsigned long)vm->mr[regc], ((1 << 32)));
+                (unsigned long)vm->mr[regc], (unsigned long)((1 << 30)));
             break;
         }
         case OP4: {
-            vm->mr[rega] = (vm->mr[regb] * vm->mr[regc]) % ((1 << 32));
+            vm->mr[rega] = (vm->mr[regb] * vm->mr[regc]);
             out("[%08x] %s: %lu = (%lu * %lu) %% %lu\n", w, opstrs[4],
                 (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
-                (unsigned long)vm->mr[regc], ((1 << 32)));
+                (unsigned long)vm->mr[regc], (unsigned long)((1 << 30)));
             break;
         }
         case OP5: {
-            vm->mr[rega] = (vm->mr[regb] / vm->mr[regc]);
             out("[%08x] %s: %lu = (%lu / %lu)\n", w, opstrs[5],
                 (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
                 (unsigned long)vm->mr[regc]);
+            vm->mr[rega] = (vm->mr[regb] / vm->mr[regc]);
             break;
         }
         case OP6: {
+            /* 11111111111111111111111111110101
+             * 11111111111111111111111111110101
+             * --------------------------------
+             * 00000000000000000000000000001010 */
+            uint32_t a = rega, b  = regb, c = regc;
+            a = ~(a & c);
+
+            vm->mr[rega] = a;
+            out("[%08x] %s: %08x = (%08x NAND %08x)\n", w, opstrs[6], a, b, c);
             break;
         }
         case OP7:
@@ -336,18 +345,32 @@ doop(vm_t *vm)
             printf("%c", out);
             break;
         }
-        case OP11:
-            out("(%08x) OP: %s\n", w, opstrs[11]);
+        case OP11: {
+            char inbuf[128];
+            static int val = -1;
+            /* XXX error checks */ 
+            if (-1 == val) { 
+                fgets(inbuf, sizeof(inbuf), stdin);
+                printf("           input: %s\n", inbuf);
+                val = (int)strtoul(inbuf, NULL, 10);
+                printf("VAL: %d\n", val);
+                vm->mr[regc] = val;
+            }
+            else {
+                vm->mr[regc] = 0xFFFFFFFF;
+                val = -1;
+            }
             break;
+        }
         case OP12: {
             int i = 0, j = 0;
             uint32_t *tmp_zarray = NULL;
             size_t len = 0, k = 0;
 
             get_array(vm, vm->mr[regb], &i, &j);
-            len = vm->addr_space[i][j].addp_len;
             /* if we are given the zero array, there is nothing to do */
             if (0 != vm->mr[regb]) {
+                len = vm->addr_space[i][j].addp_len;
                 tmp_zarray = calloc(len, sizeof(uint32_t));
                 for (k = 0; k < len; ++k) {
                     tmp_zarray[k] = vm->addr_space[i][j].addp[k];
