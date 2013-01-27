@@ -250,7 +250,7 @@ dealloc_array(vm_t *vm,
 int
 doop(vm_t *vm)
 {
-    uint32_t w = vm->zero_array[vm->pc++];
+    uint32_t w = vm->zero_array[vm->pc];
 
     /* machine register index */
     size_t rega = (w & RA) >> 6; /* 6:8 */
@@ -265,8 +265,10 @@ doop(vm_t *vm)
                     (unsigned long)vm->mr[regb]);
                 vm->mr[rega] = vm->mr[regb];
             }
-            out("[%08x] %s: reg %lu == 0, so doing nothing\n", w, opstrs[0],
-                (unsigned long)regc);
+            else {
+                out("[%08x] %s: reg %lu == 0, so doing nothing\n", w, opstrs[0],
+                    (unsigned long)regc);
+            }
             break;
         }
         case OP1: {
@@ -281,9 +283,9 @@ doop(vm_t *vm)
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
-            out("[%08x] %s: rA's id: %lu @ [%d, %d]\n", w, opstrs[2],
-                (unsigned long)vm->mr[rega], i, j);
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
+            out("[%08x] %s: [%d][%d] @ OFFSET %lu = %lu\n", w, opstrs[2], 
+                i, j, (unsigned long)vm->mr[regb], (unsigned long)vm->mr[regc]);
             break;
         }
         case OP3: {
@@ -312,8 +314,8 @@ doop(vm_t *vm)
              * 11111111111111111111111111110101
              * --------------------------------
              * 00000000000000000000000000001010 */
-            uint32_t a = rega, b  = regb, c = regc;
-            a = ~(a & c);
+            uint32_t a = vm->mr[rega], b  = vm->mr[regb], c = vm->mr[regc];
+            a = ~(b & c);
 
             vm->mr[rega] = a;
             out("[%08x] %s: %08x = (%08x NAND %08x)\n", w, opstrs[6], a, b, c);
@@ -354,10 +356,10 @@ doop(vm_t *vm)
                 printf("           input: %s\n", inbuf);
                 val = (int)strtoul(inbuf, NULL, 10);
                 printf("VAL: %d\n", val);
-                vm->mr[regc] = val;
+                vm->mr[regc] = val % 256;
             }
             else {
-                vm->mr[regc] = 0xFFFFFFFF;
+                w |= 0x00000007;
                 val = -1;
             }
             break;
@@ -379,7 +381,7 @@ doop(vm_t *vm)
                 vm->zero_array = tmp_zarray;
             }
             /* else we are dealing with the current zero array */
-            vm->pc = vm->mr[regc];
+            vm->pc = vm->mr[regc] - 1;
             out("[%08x] %s: dup'ing %lu [%d, %d] "
                 "and replacing zero array. pc set to %lu\n",
                 w, opstrs[12], (unsigned long)vm->mr[regb], i, j,
@@ -405,7 +407,7 @@ doop(vm_t *vm)
             out("INVALID OP!\n");
             return ERR_IOOB;
     }
-
+    vm->pc++;
     return SUCCESS;
 }
 
