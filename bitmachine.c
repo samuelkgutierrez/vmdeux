@@ -26,6 +26,7 @@
 #include <stdbool.h>
 #include <errno.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #define PACKAGE     "bitmachine"
 #define PACKAGE_VER "0.1"
@@ -92,7 +93,7 @@ char *opstrs[32] = {
     "Output",
     "Input",
     "Load Program",
-    "Load Immediate",
+    "loadimm",
     NULL
 };
 
@@ -420,17 +421,17 @@ doop(vm_t *vm)
         case OP13: {
             /* this op is special */
             uint32_t val = w & 0x01FFFFFFU;
-            uint32_t index = ((w & 0x0E000000) >> 25);
+            uint32_t a = ((w & 0x0E000000) >> 25);
             /*
             00000000000000000000000000000000
                    1111111111111111111111111 - value
                 1110000000000000000000000000 - reg id
             11110000000000000000000000000000 - op
             */
-            vm->mr[index] = val;
-            out("[%08x @ %lu] %s: setting reg %lu to %lu\n", w,
-                (unsigned long)vm->pc, opstrs[13],
-                (unsigned long)index, (unsigned long)val);
+            vm->mr[a] = val;
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32"\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[13],
+                a, val);
             break;
         }
         default:
