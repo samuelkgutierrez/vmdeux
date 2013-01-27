@@ -335,7 +335,7 @@ doop(vm_t *vm)
              * 11111111111111111111111111110100
              * --------------------------------
              * 00000000000000000000000000001011 */
-            uint64_t a = vm->mr[rega], b  = vm->mr[regb], c = vm->mr[regc];
+            uint32_t a = vm->mr[rega], b  = vm->mr[regb], c = vm->mr[regc];
             a = ~(b & c);
 
             vm->mr[rega] = (uint32_t)a;
