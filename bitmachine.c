@@ -25,6 +25,7 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <assert.h>
 
 #define PACKAGE     "bitmachine"
 #define PACKAGE_VER "0.1"
@@ -56,7 +57,6 @@ do {                                                                           \
 
 /* opcode is given by the bits 28:31 */
 #define OP_MASK  0xF0000000
-#define REG_MASK 0x000001FF
 
 #define N_REGISTERS 8
 #define MEM_MAX_INDEX ( 1 << 9 )
@@ -238,6 +238,7 @@ dealloc_array(vm_t *vm,
               uint32_t id)
 {
     int i = id / AS_ARRAY_SIZE, j = id % AS_ARRAY_SIZE;
+    out("           freeing [%d %d]\n", i, j);
     free(vm->addr_space[i][j].addp);
     vm->addr_space[i][j].addp = NULL;
     vm->addr_space[i][j].used = false;
@@ -256,6 +257,8 @@ doop(vm_t *vm)
     size_t rega = (w & RA) >> 6; /* 6:8 */
     size_t regb = (w & RB) >> 3; /* 3:5 */
     size_t regc = (w & RC);      /* 0:2 */
+
+    assert(rega <= 7 && regb <= 7 && regc <= 7);
 
     switch (w & OP_MASK) {
         case OP0: {
@@ -291,14 +294,13 @@ doop(vm_t *vm)
             break;
         }
         case OP3: {
-            uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
+            uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
             a = (b + c) % 4294967296;
             vm->mr[rega] = (uint32_t)a;
-            printf("[%08x @ %lu] %s: %llu = (%llu + %llu)\n", w, (unsigned long)vm->pc,
-                opstrs[3], (unsigned long long)vm->mr[rega],
-                (unsigned long long)b,
-                (unsigned long long)c);
+            out("[%08x @ %lu] %s: %lu = (%lu + %lu)\n", w, (unsigned long)vm->pc,
+                opstrs[3], (unsigned long)vm->mr[rega],
+                (unsigned long)b, (unsigned long)c);
             break;
         }
         case OP4: {
@@ -306,17 +308,18 @@ doop(vm_t *vm)
 
             a = (b  * c) % 4294967296;
             vm->mr[rega] = (uint32_t)a;
-            printf("[%08x @ %lu] %s: %lu = (%lu * %lu)\n", w, (unsigned long)vm->pc,
+            out("[%08x @ %lu] %s: %lu = (%lu * %lu)\n", w, (unsigned long)vm->pc,
                 opstrs[4], (unsigned long)vm->mr[rega],
-                (unsigned long)b,
-                (unsigned long)c);
+                (unsigned long)b, (unsigned long)c);
             break;
         }
         case OP5: {
-            vm->mr[rega] = (vm->mr[regb] / vm->mr[regc]);
+            uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
+            a = b / c; 
+            vm->mr[rega] = a; 
             out("[%08x @ %lu] %s: %lu = (%lu / %lu)\n", w, (unsigned long)vm->pc,
-                opstrs[5], (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
-                (unsigned long)vm->mr[regc]);
+                opstrs[5], (unsigned long)vm->mr[rega], (unsigned long)b,
+                (unsigned long)c);
             break;
         }
         case OP6: {
@@ -324,23 +327,25 @@ doop(vm_t *vm)
              * 11111111111111111111111111110101
              * --------------------------------
              * 00000000000000000000000000001010 */
-            uint32_t a = vm->mr[rega], b  = vm->mr[regb], c = vm->mr[regc];
+            uint64_t a = vm->mr[rega], b  = vm->mr[regb], c = vm->mr[regc];
             a = ~(b & c);
 
-            vm->mr[rega] = a;
+            vm->mr[rega] = (uint32_t)a;
             out("[%08x @ %lu] %s: %08x = (%08x NAND %08x)\n", w, (unsigned long)vm->pc,
-                opstrs[6], a, b, c);
+                opstrs[6], (unsigned int)vm->mr[rega], (unsigned int)b, (unsigned int)c);
             break;
         }
         case OP7:
-            out("[%08x @ %lu] %s:\n", w, (unsigned long)vm->pc, opstrs[7]);
+            printf("[%08x @ %lu] %s: A %lu B %lu C %lu\n", w, (unsigned long)vm->pc,
+                   opstrs[7], (unsigned long)vm->mr[rega],
+                   (unsigned long)vm->mr[regb],
+                   (unsigned long)vm->mr[regc]);
             return HALT;
         case OP8: {
             uint32_t id = 0;
             if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
                 return ERR;
             }
-            printf("############## %lu\n", vm->mr[regb]);
             vm->mr[regb] = id;
             out("[%08x @ %lu] %s: alloc'd %lu words setting reg %d to %lu\n", w,
                 (unsigned long)vm->pc, opstrs[8], (unsigned long)vm->mr[regc],
@@ -361,21 +366,31 @@ doop(vm_t *vm)
             break;
         }
         case OP11: {
-            char inbuf[128];
+            char inbuf[4];
             int val = 0;
+            static bool read = true;
+            printf("[%08x @ %lu] %s: A %lu B %lu C %lu\n", w, (unsigned long)vm->pc,
+                   opstrs[11], vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             /* XXX error checks */ 
-            printf("           w: %08x\n", w);
-            fgets(inbuf, sizeof(inbuf), stdin);
-            printf("           input: %s\n", inbuf);
-            val = (int)strtoul(inbuf, NULL, 10);
-            if (val > 256) {
-                return ERR;
+            if (read) {
+                printf("READ!!!!!!!!!!!1\n");
+                fgets(inbuf, sizeof(inbuf), stdin);
+                printf("           input: %s\n", inbuf);
+                val = (int)strtoul(inbuf, NULL, 10);
+                if (0 > val || val > 256) {
+                    return ERR;
+                }
+                printf("VAL: %d\n", val);
+                vm->mr[regc] = (uint32_t)val;
+                printf("REGC: %08x\n", vm->mr[regc]);
+                printf("           w: %08x\n", w);
+                read = false;
             }
-            printf("VAL: %d\n", val);
-            vm->mr[regc] = val;
-            printf("REGC: %08x\n", vm->mr[regc]);
-            w |= 0x00000007;
-            printf("           w: %08x\n", w);
+            else {
+                printf("!!!!setting\n");
+                regc |= 0x00000007;
+                read = true;
+            }
             break;
         }
         case OP12: {
@@ -404,7 +419,7 @@ doop(vm_t *vm)
         }
         case OP13: {
             /* this op is special */
-            uint32_t val = w & 0x01FFFFFF;
+            uint32_t val = w & 0x01FFFFFFU;
             uint32_t index = ((w & 0x0E000000) >> 25);
             /*
             00000000000000000000000000000000
