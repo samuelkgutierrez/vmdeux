@@ -291,24 +291,32 @@ doop(vm_t *vm)
             break;
         }
         case OP3: {
-            vm->mr[rega] = (vm->mr[regb] + vm->mr[regc]);
-            out("[%08x @ %lu] %s: %lu = (%lu + %lu) %% %lu\n", w, (unsigned long)vm->pc,
-                opstrs[3], (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
-                (unsigned long)vm->mr[regc], (unsigned long)((1 << 30)));
+            uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
+
+            a = (b + c) % 4294967296;
+            vm->mr[rega] = (uint32_t)a;
+            printf("[%08x @ %lu] %s: %llu = (%llu + %llu)\n", w, (unsigned long)vm->pc,
+                opstrs[3], (unsigned long long)vm->mr[rega],
+                (unsigned long long)b,
+                (unsigned long long)c);
             break;
         }
         case OP4: {
-            vm->mr[rega] = (vm->mr[regb] * vm->mr[regc]);
-            out("[%08x @ %lu] %s: %lu = (%lu * %lu) %% %lu\n", w, (unsigned long)vm->pc,
-                opstrs[4], (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
-                (unsigned long)vm->mr[regc], (unsigned long)((1 << 30)));
+            uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
+
+            a = (b  * c) % 4294967296;
+            vm->mr[rega] = (uint32_t)a;
+            printf("[%08x @ %lu] %s: %lu = (%lu * %lu)\n", w, (unsigned long)vm->pc,
+                opstrs[4], (unsigned long)vm->mr[rega],
+                (unsigned long)b,
+                (unsigned long)c);
             break;
         }
         case OP5: {
+            vm->mr[rega] = (vm->mr[regb] / vm->mr[regc]);
             out("[%08x @ %lu] %s: %lu = (%lu / %lu)\n", w, (unsigned long)vm->pc,
                 opstrs[5], (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
                 (unsigned long)vm->mr[regc]);
-            vm->mr[rega] = (vm->mr[regb] / vm->mr[regc]);
             break;
         }
         case OP6: {
@@ -332,6 +340,7 @@ doop(vm_t *vm)
             if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
                 return ERR;
             }
+            printf("############## %lu\n", vm->mr[regb]);
             vm->mr[regb] = id;
             out("[%08x @ %lu] %s: alloc'd %lu words setting reg %d to %lu\n", w,
                 (unsigned long)vm->pc, opstrs[8], (unsigned long)vm->mr[regc],
@@ -359,20 +368,24 @@ doop(vm_t *vm)
             fgets(inbuf, sizeof(inbuf), stdin);
             printf("           input: %s\n", inbuf);
             val = (int)strtoul(inbuf, NULL, 10);
+            if (val > 256) {
+                return ERR;
+            }
             printf("VAL: %d\n", val);
-            vm->mr[regc] = val % 256;
+            vm->mr[regc] = val;
+            printf("REGC: %08x\n", vm->mr[regc]);
             w |= 0x00000007;
             printf("           w: %08x\n", w);
             break;
         }
         case OP12: {
             int i = 0, j = 0;
-            uint32_t *tmp_zarray = NULL;
-            size_t len = 0, k = 0;
 
-            get_array(vm, vm->mr[regb], &i, &j);
             /* if we are given the zero array, there is nothing to do */
             if (0 != vm->mr[regb]) {
+                uint32_t *tmp_zarray = NULL;
+                size_t len = 0, k = 0;
+                get_array(vm, vm->mr[regb], &i, &j);
                 len = vm->addr_space[i][j].addp_len;
                 tmp_zarray = calloc(len, sizeof(uint32_t));
                 for (k = 0; k < len; ++k) {
@@ -382,11 +395,11 @@ doop(vm_t *vm)
                 vm->zero_array = tmp_zarray;
             }
             /* else we are dealing with the current zero array */
-            vm->pc = vm->mr[regc] - 1;
             out("[%08x @ %lu] %s: dup'ing %lu [%d, %d] "
                 "and replacing zero array. pc set to %lu\n",
                 w, (unsigned long)vm->pc, opstrs[12],
                 (unsigned long)vm->mr[regb], i, j, (unsigned long)vm->mr[regc]);
+            vm->pc = vm->mr[regc] - 1;
             break;
         }
         case OP13: {
