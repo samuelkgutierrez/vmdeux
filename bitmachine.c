@@ -260,14 +260,14 @@ doop(vm_t *vm)
     switch (w & OP_MASK) {
         case OP0: {
             if (0 != vm->mr[regc]) {
-                out("[%08x] %s: reg %lu != 0, so setting reg %lu to %lu\n", w,
-                    opstrs[0], (unsigned long)regc, (unsigned long)rega,
-                    (unsigned long)vm->mr[regb]);
+                out("[%08x @ %lu] %s: reg %lu != 0, so setting reg %lu to %lu\n", w,
+                    (unsigned long)vm->pc, opstrs[0], (unsigned long)regc,
+                    (unsigned long)rega, (unsigned long)vm->mr[regb]);
                 vm->mr[rega] = vm->mr[regb];
             }
             else {
-                out("[%08x] %s: reg %lu == 0, so doing nothing\n", w, opstrs[0],
-                    (unsigned long)regc);
+                out("[%08x @ %lu] %s: reg %lu == 0, so doing nothing\n", w,
+                    (unsigned long)vm->pc, opstrs[0], (unsigned long)regc);
             }
             break;
         }
@@ -276,35 +276,37 @@ doop(vm_t *vm)
             get_array(vm, vm->mr[regb], &i, &j);
             /* XXX check bounds */
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
-            out("[%08x] %s: MR @ %d = [%d][%d] @ OFFSET %lu\n", w, opstrs[1], 
-                (int)regb, i, j, (unsigned long)vm->mr[regc]);
+            out("[%08x @ %lu] %s: MR @ %d = [%d][%d] @ OFFSET %lu\n", w,
+                (unsigned long)vm->pc, opstrs[1], (int)regb, i, j,
+                (unsigned long)vm->mr[regc]);
             break;
         }
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
-            out("[%08x] %s: [%d][%d] @ OFFSET %lu = %lu\n", w, opstrs[2], 
-                i, j, (unsigned long)vm->mr[regb], (unsigned long)vm->mr[regc]);
+            out("[%08x @ %lu] %s: [%d][%d] @ OFFSET %lu = %lu\n", w, (unsigned long)vm->pc,
+                opstrs[2], i, j, (unsigned long)vm->mr[regb],
+                (unsigned long)vm->mr[regc]);
             break;
         }
         case OP3: {
             vm->mr[rega] = (vm->mr[regb] + vm->mr[regc]);
-            out("[%08x] %s: %lu = (%lu + %lu) %% %lu\n", w, opstrs[3],
-                (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
+            out("[%08x @ %lu] %s: %lu = (%lu + %lu) %% %lu\n", w, (unsigned long)vm->pc,
+                opstrs[3], (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
                 (unsigned long)vm->mr[regc], (unsigned long)((1 << 30)));
             break;
         }
         case OP4: {
             vm->mr[rega] = (vm->mr[regb] * vm->mr[regc]);
-            out("[%08x] %s: %lu = (%lu * %lu) %% %lu\n", w, opstrs[4],
-                (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
+            out("[%08x @ %lu] %s: %lu = (%lu * %lu) %% %lu\n", w, (unsigned long)vm->pc,
+                opstrs[4], (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
                 (unsigned long)vm->mr[regc], (unsigned long)((1 << 30)));
             break;
         }
         case OP5: {
-            out("[%08x] %s: %lu = (%lu / %lu)\n", w, opstrs[5],
-                (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
+            out("[%08x @ %lu] %s: %lu = (%lu / %lu)\n", w, (unsigned long)vm->pc,
+                opstrs[5], (unsigned long)vm->mr[rega], (unsigned long)vm->mr[regb],
                 (unsigned long)vm->mr[regc]);
             vm->mr[rega] = (vm->mr[regb] / vm->mr[regc]);
             break;
@@ -318,11 +320,12 @@ doop(vm_t *vm)
             a = ~(b & c);
 
             vm->mr[rega] = a;
-            out("[%08x] %s: %08x = (%08x NAND %08x)\n", w, opstrs[6], a, b, c);
+            out("[%08x @ %lu] %s: %08x = (%08x NAND %08x)\n", w, (unsigned long)vm->pc,
+                opstrs[6], a, b, c);
             break;
         }
         case OP7:
-            out("[%08x] %s:\n", w, opstrs[7]);
+            out("[%08x @ %lu] %s:\n", w, (unsigned long)vm->pc, opstrs[7]);
             return HALT;
         case OP8: {
             uint32_t id = 0;
@@ -330,16 +333,17 @@ doop(vm_t *vm)
                 return ERR;
             }
             vm->mr[regb] = id;
-            out("[%08x] %s: alloc'd %lu words setting reg %d to %lu\n", w,
-                opstrs[8], (unsigned long)vm->mr[regc], (int)vm->mr[regb],
-                (unsigned long)id);
+            out("[%08x @ %lu] %s: alloc'd %lu words setting reg %d to %lu\n", w,
+                (unsigned long)vm->pc, opstrs[8], (unsigned long)vm->mr[regc],
+                (int)vm->mr[regb], (unsigned long)id);
             break;
         }
         case OP9: {
             if (SUCCESS != dealloc_array(vm, vm->mr[regc])) {
                 return ERR;
             }
-            out("[%08x] %s: %lu\n", w, opstrs[9], (unsigned long)vm->mr[regc]);
+            out("[%08x @ %lu] %s: %lu\n", w, (unsigned long)vm->pc,
+                opstrs[9], (unsigned long)vm->mr[regc]);
             break;
         }
         case OP10: {
@@ -349,19 +353,16 @@ doop(vm_t *vm)
         }
         case OP11: {
             char inbuf[128];
-            static int val = -1;
+            int val = 0;
             /* XXX error checks */ 
-            if (-1 == val) { 
-                fgets(inbuf, sizeof(inbuf), stdin);
-                printf("           input: %s\n", inbuf);
-                val = (int)strtoul(inbuf, NULL, 10);
-                printf("VAL: %d\n", val);
-                vm->mr[regc] = val % 256;
-            }
-            else {
-                w |= 0x00000007;
-                val = -1;
-            }
+            printf("           w: %08x\n", w);
+            fgets(inbuf, sizeof(inbuf), stdin);
+            printf("           input: %s\n", inbuf);
+            val = (int)strtoul(inbuf, NULL, 10);
+            printf("VAL: %d\n", val);
+            vm->mr[regc] = val % 256;
+            w |= 0x00000007;
+            printf("           w: %08x\n", w);
             break;
         }
         case OP12: {
@@ -382,10 +383,10 @@ doop(vm_t *vm)
             }
             /* else we are dealing with the current zero array */
             vm->pc = vm->mr[regc] - 1;
-            out("[%08x] %s: dup'ing %lu [%d, %d] "
+            out("[%08x @ %lu] %s: dup'ing %lu [%d, %d] "
                 "and replacing zero array. pc set to %lu\n",
-                w, opstrs[12], (unsigned long)vm->mr[regb], i, j,
-                (unsigned long)vm->mr[regc]);
+                w, (unsigned long)vm->pc, opstrs[12],
+                (unsigned long)vm->mr[regb], i, j, (unsigned long)vm->mr[regc]);
             break;
         }
         case OP13: {
@@ -399,7 +400,8 @@ doop(vm_t *vm)
             11110000000000000000000000000000 - op
             */
             vm->mr[index] = val;
-            out("[%08x] %s: setting reg %lu to %lu\n", w, opstrs[13],
+            out("[%08x @ %lu] %s: setting reg %lu to %lu\n", w,
+                (unsigned long)vm->pc, opstrs[13],
                 (unsigned long)index, (unsigned long)val);
             break;
         }
