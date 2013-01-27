@@ -83,15 +83,15 @@ char *opstrs[32] = {
     "cmov",
     "aidx",
     "aupd",
-    "Addition",
-    "Multiplication",
-    "Division",
+    "add",
+    "mul",
+    "div",
     "nand",
-    "Halt",
+    "halt",
     "alloc",
-    "Deallocation",
+    "dealloc",
     "Output",
-    "Input",
+    "in",
     "loadprog",
     "loadimm",
     NULL
@@ -247,7 +247,9 @@ dealloc_array(vm_t *vm,
               uint32_t id)
 {
     int i = id / AS_ARRAY_SIZE, j = id % AS_ARRAY_SIZE;
+#if 0
     out("           freeing [%d %d]\n", i, j);
+#endif
     free(vm->addr_space[i][j].addp);
     vm->addr_space[i][j].addp = NULL;
     vm->addr_space[i][j].used = false;
@@ -295,7 +297,7 @@ doop(vm_t *vm)
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[2],
-                rega, regb, regc); 
+                rega, regb, regc);
             break;
         }
         case OP3: {
@@ -303,9 +305,9 @@ doop(vm_t *vm)
 
             a = (b + c) % 4294967296;
             vm->mr[rega] = (uint32_t)a;
-            out("[%08x @ %lu] %s: %lu = (%lu + %lu)\n", w, (unsigned long)vm->pc,
-                opstrs[3], (unsigned long)vm->mr[rega],
-                (unsigned long)b, (unsigned long)c);
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[3],
+                rega, regb, regc);
             break;
         }
         case OP4: {
@@ -313,18 +315,18 @@ doop(vm_t *vm)
 
             a = (b  * c) % 4294967296;
             vm->mr[rega] = (uint32_t)a;
-            out("[%08x @ %lu] %s: %lu = (%lu * %lu)\n", w, (unsigned long)vm->pc,
-                opstrs[4], (unsigned long)vm->mr[rega],
-                (unsigned long)b, (unsigned long)c);
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[4],
+                rega, regb, regc);
             break;
         }
         case OP5: {
             uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
-            a = b / c; 
-            vm->mr[rega] = a; 
-            out("[%08x @ %lu] %s: %lu = (%lu / %lu)\n", w, (unsigned long)vm->pc,
-                opstrs[5], (unsigned long)vm->mr[rega], (unsigned long)b,
-                (unsigned long)c);
+            a = b / c;
+            vm->mr[rega] = a;
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[5],
+                rega, regb, regc);
             break;
         }
         case OP6: {
@@ -342,10 +344,8 @@ doop(vm_t *vm)
             break;
         }
         case OP7:
-            printf("[%08x @ %lu] %s: A %lu B %lu C %lu\n", w, (unsigned long)vm->pc,
-                   opstrs[7], (unsigned long)vm->mr[rega],
-                   (unsigned long)vm->mr[regb],
-                   (unsigned long)vm->mr[regc]);
+            out("%08x %08x %010lu %s\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[7]);
             return HALT;
         case OP8: {
             uint32_t id = 0;
@@ -355,15 +355,16 @@ doop(vm_t *vm)
             vm->mr[regb] = id;
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32"\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[8],
-                regb, regc); 
+                regb, regc);
             break;
         }
         case OP9: {
             if (SUCCESS != dealloc_array(vm, vm->mr[regc])) {
                 return ERR;
             }
-            out("[%08x @ %lu] %s: %lu\n", w, (unsigned long)vm->pc,
-                opstrs[9], (unsigned long)vm->mr[regc]);
+            out("%08x %08x %010lu %s %"PRIu32"\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[9],
+                regc);
             break;
         }
         case OP10: {
@@ -372,29 +373,9 @@ doop(vm_t *vm)
             break;
         }
         case OP11: {
-            char inbuf[4];
-            int val = 0;
-            static bool read = true;
-            /* XXX error checks */ 
-            if (read) {
-                printf("READ!!!!!!!!!!!1\n");
-                fgets(inbuf, sizeof(inbuf), stdin);
-                printf("           input: %s\n", inbuf);
-                val = (int)strtoul(inbuf, NULL, 10);
-                if (0 > val || val > 256) {
-                    return ERR;
-                }
-                printf("VAL: %d\n", val);
-                vm->mr[regc] = (uint32_t)val;
-                printf("REGC: %08x\n", vm->mr[regc]);
-                printf("           w: %08x\n", w);
-                read = false;
-            }
-            else {
-                printf("!!!!setting\n");
-                regc |= 0x00000007;
-                read = true;
-            }
+            out("%08x %08x %010lu %s %"PRIu32"\n",
+                vm->pc, w, (unsigned long)vm->pc, opstrs[9],
+                regc);
             break;
         }
         case OP12: {
