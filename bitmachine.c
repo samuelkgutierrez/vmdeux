@@ -414,8 +414,8 @@ doop(vm_t *vm)
                 "and replacing zero array. pc set to %lu\n",
                 w, (unsigned long)vm->pc, opstrs[12],
                 (unsigned long)vm->mr[regb], i, j, (unsigned long)vm->mr[regc]);
-            vm->pc = vm->mr[regc] - 1;
-            break;
+            vm->pc = vm->mr[regc];
+            return SUCCESS;
         }
         case OP13: {
             /* this op is special */
