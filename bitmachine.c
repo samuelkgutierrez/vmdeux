@@ -272,9 +272,10 @@ doop(vm_t *vm)
                 return ERR;
             }
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
-            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[1],
-                rega, regb, regc);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
         }
         case OP2: {
@@ -284,9 +285,10 @@ doop(vm_t *vm)
                 return ERR;
             }
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
-            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[2],
-                rega, regb, regc);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
         }
         case OP3: {
@@ -304,7 +306,7 @@ doop(vm_t *vm)
         case OP4: {
             uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
-            a = (b  * c) % 0x0000000100000000U;
+            a = (b * c) % 0x0000000100000000U; 
             vm->mr[rega] = a & 0x00000000FFFFFFFFU;
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
