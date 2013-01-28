@@ -398,8 +398,8 @@ doop(vm_t *vm)
             }
             else {
                 vm->mr[regc] = val;
+                need_sanity = false;
             }
-            need_sanity = false;
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[11],
