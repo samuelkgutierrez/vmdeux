@@ -373,7 +373,6 @@ doop(vm_t *vm)
             break;
         }
         case OP11: {
-            int in = 0;
             char val = 0;
             fscanf(stdin, "%c", &val);
             if (EOF == val) {
