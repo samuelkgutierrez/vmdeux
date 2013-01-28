@@ -292,38 +292,39 @@ doop(vm_t *vm)
             break;
         }
         case OP3: {
-            uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
+            uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
-            a = (b + c) % 0x0000000100000000U; 
-            vm->mr[rega] = a & 0x00000000FFFFFFFFU;
+            a = (b + c);
+            vm->mr[rega] = a;
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[3],
-                rega, regb, regc, (unsigned int)vm->mr[rega], (unsigned int)b,
-                (unsigned int)c);
+                rega, regb, regc, vm->mr[rega], b, c);
             break;
         }
         case OP4: {
-            uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
+            uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
-            a = (b * c) % 0x0000000100000000U; 
-            vm->mr[rega] = a & 0x00000000FFFFFFFFU;
+            a = (b * c);
+            vm->mr[rega] = a; 
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[4],
-                rega, regb, regc, (unsigned int)vm->mr[rega], (unsigned int)b,
-                (unsigned int)c);
+                rega, regb, regc, vm->mr[rega], b, c);
             break;
         }
         case OP5: {
             uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
+
+            if (0 == c) {
+                return ERR;
+            }
             a = b / c;
             vm->mr[rega] = a;
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[5],
-                rega, regb, regc, (unsigned int)vm->mr[rega], (unsigned int)b,
-                (unsigned int)c);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
         }
         case OP6: {
@@ -335,9 +336,10 @@ doop(vm_t *vm)
             a = ~(b & c);
 
             vm->mr[rega] = a;
-            out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8"\n",
+            out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[6],
-                rega, regb, regc);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
         }
         case OP7:
@@ -353,8 +355,7 @@ doop(vm_t *vm)
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[8],
-                rega, regb, regc, (unsigned int)vm->mr[rega],
-                (unsigned int)vm->mr[regb], (unsigned int)vm->mr[regc]);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
         }
         case OP9: {
@@ -367,29 +368,27 @@ doop(vm_t *vm)
             break;
         }
         case OP10: {
-            uint8_t out = vm->mr[regc] % 256;
+            char out = vm->mr[regc] % 256;
             printf("%c", out);
             break;
         }
         case OP11: {
-            char inputbuf[8];
-            int val = 0;
-            memset(inputbuf, '\0', sizeof(inputbuf));
-            fgets(inputbuf, sizeof(inputbuf), stdin);
-            val = (int)strtoul(inputbuf, NULL, 10);
-            if (val < 0 || val > 255) {
-                return ERR;
+            int in = 0;
+
+            in = fgetc(stdin);
+
+            if (10 == in || EOF == in) {
+                printf("DONE!\n");
             }
-            vm->mr[regc] = (uint32_t)val;
-#if 0
-            /* set the value of regc to all ones */
-            w |= 0x00000007;
-            /* set regc to all ones and the input */
-            vm->mr[regc] |= 0xFFFFFF00;
-#endif
-            printf("%08x %08x %010lu %s %"PRIu32" [0x%08x]\n",
+            else {
+                printf("SET!\n");
+                vm->mr[regc] = (uint32_t)in - 48;
+            }
+
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[11],
-                regc, vm->mr[regc]);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
         }
         case OP12: {
@@ -409,16 +408,17 @@ doop(vm_t *vm)
                 vm->zero_array = tmp_zarray;
             }
             /* else we are dealing with the current zero array */
-            out("%08x %08x %010lu %s %"PRIu8" %"PRIu8"\n",
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[12],
-                regb, regc);
+                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             vm->pc = vm->mr[regc];
             return SUCCESS;
         }
         case OP13: {
             /* this op is special */
             uint32_t val = w & 0x01FFFFFFU;
-            uint32_t a = ((w & 0x0E000000) >> 25);
+            uint32_t a = ((w & 0x0E000000U) >> 25);
             /*
             00000000000000000000000000000000
                    1111111111111111111111111 - value
