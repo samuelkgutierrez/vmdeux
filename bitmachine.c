@@ -374,17 +374,14 @@ doop(vm_t *vm)
         }
         case OP11: {
             int in = 0;
-
-            in = fgetc(stdin);
-
-            if (10 == in || EOF == in) {
-                printf("DONE!\n");
+            char val = 0;
+            fscanf(stdin, "%c", &val);
+            if (EOF == val) {
+                vm->mr[regc] = 0xFFFFFFFF;
             }
             else {
-                printf("SET!\n");
-                vm->mr[regc] = (uint32_t)in - 48;
+                vm->mr[regc] = val;
             }
-
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[11],
