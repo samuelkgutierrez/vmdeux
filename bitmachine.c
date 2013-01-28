@@ -208,9 +208,11 @@ alloc_array(vm_t *vm,
             size_t nwords,
             uint32_t *id)
 {
-    /* XXX make sure we have a used id from find_avail_id */
+    int i = -1, j = -1;
+    /* XXX check for valid id */
     *id = find_avail_id(vm);
-    int i = (*id / AS_ARRAY_SIZE), j = (*id % AS_ARRAY_SIZE);
+    i = (*id / AS_ARRAY_SIZE);
+    j = (*id % AS_ARRAY_SIZE);
     vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
     vm->addr_space[i][j].addp_len = nwords;
 
@@ -285,7 +287,9 @@ doop(vm_t *vm)
         case OP1: {
             int i, j;
             get_array(vm, vm->mr[regb], &i, &j);
-            /* XXX check bounds */
+            if (vm->mr[regc] >= vm->addr_space[i][j].addp_len) {
+                return ERR;
+            }
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
             out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8"\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[1],
@@ -295,6 +299,9 @@ doop(vm_t *vm)
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
+            if (vm->mr[regb] >= vm->addr_space[i][j].addp_len) {
+                return ERR;
+            }
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[2],
