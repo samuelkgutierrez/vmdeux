@@ -230,7 +230,7 @@ dealloc_array(vm_t *vm,
               uint32_t id)
 {
     int i, j;
-    
+
     get_array(vm, id, &i, &j);
 
     free(vm->addr_space[i][j].addp);
@@ -306,7 +306,7 @@ doop(vm_t *vm)
             uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
             a = (b * c);
-            vm->mr[rega] = a; 
+            vm->mr[rega] = a;
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[4],
@@ -339,7 +339,7 @@ doop(vm_t *vm)
             out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[6],
-                rega, regb, regc, a, b, c); 
+                rega, regb, regc, a, b, c);
             break;
         }
         case OP7:
@@ -373,14 +373,33 @@ doop(vm_t *vm)
             break;
         }
         case OP11: {
+            static int index = 0;
+            static bool need_sanity = true;
             char val = 0;
-            fscanf(stdin, "%c", &val);
-            if (EOF == val) {
+            static char buf[8];
+            char *bufp = NULL;
+
+            if (need_sanity) {
+                int tval = 0;
+                index = 0;
+                memset(buf, '\0', sizeof(buf));
+                fgets(buf, sizeof(buf), stdin);
+                tval = (int)strtol(buf, NULL, 10);
+                if (tval < 0 || tval > 255) {
+                    fprintf(stderr, "input must be in the range 0:255\n");
+                    return ERR;
+                }
+            }
+            bufp = buf + index++;
+            sscanf(bufp, "%c", &val);
+            if ('\0' == val) {
                 vm->mr[regc] = 0xFFFFFFFF;
+                need_sanity = true;
             }
             else {
                 vm->mr[regc] = val;
             }
+            need_sanity = false;
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[11],
@@ -520,7 +539,8 @@ go(const char *exe)
     }
 
 out:
-    return vm_destruct(vm);
+    vm_destruct(vm);
+    return rc;
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
