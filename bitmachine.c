@@ -273,7 +273,7 @@ doop(vm_t *vm)
 
     switch (w & OP_MASK) {
         case OP0: {
-            if (vm->mr[regc] != 0x00000000) {
+            if (vm->mr[regc] != 0x00000000U) {
                 vm->mr[rega] = vm->mr[regb];
             }
             out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8" "
@@ -304,30 +304,36 @@ doop(vm_t *vm)
         case OP3: {
             uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
-            a = (b + c) % 4294967296;
-            vm->mr[rega] = (uint32_t)a;
-            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+            a = (b + c) % 0x0000000100000000U; 
+            vm->mr[rega] = a & 0x00000000FFFFFFFFU;
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[3],
-                rega, regb, regc);
+                rega, regb, regc, (unsigned int)vm->mr[rega], (unsigned int)b,
+                (unsigned int)c);
             break;
         }
         case OP4: {
             uint64_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
-            a = (b  * c) % 4294967296;
-            vm->mr[rega] = (uint32_t)a;
-            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+            a = (b  * c) % 0x0000000100000000U;
+            vm->mr[rega] = a & 0x00000000FFFFFFFFU;
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[4],
-                rega, regb, regc);
+                rega, regb, regc, (unsigned int)vm->mr[rega], (unsigned int)b,
+                (unsigned int)c);
             break;
         }
         case OP5: {
             uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
             a = b / c;
             vm->mr[rega] = a;
-            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[5],
-                rega, regb, regc);
+                rega, regb, regc, (unsigned int)vm->mr[rega], (unsigned int)b,
+                (unsigned int)c);
             break;
         }
         case OP6: {
@@ -338,7 +344,7 @@ doop(vm_t *vm)
             uint32_t a = vm->mr[rega], b  = vm->mr[regb], c = vm->mr[regc];
             a = ~(b & c);
 
-            vm->mr[rega] = (uint32_t)a;
+            vm->mr[rega] = a;
             out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8"\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[6],
                 rega, regb, regc);
@@ -354,18 +360,20 @@ doop(vm_t *vm)
                 return ERR;
             }
             vm->mr[regb] = id;
-            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32"\n",
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
+                "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[8],
-                regb, regc);
+                rega, regb, regc, (unsigned int)vm->mr[rega],
+                (unsigned int)vm->mr[regb], (unsigned int)vm->mr[regc]);
             break;
         }
         case OP9: {
             if (SUCCESS != dealloc_array(vm, vm->mr[regc])) {
                 return ERR;
             }
-            out("%08x %08x %010lu %s %"PRIu32"\n",
+            out("%08x %08x %010lu %s %"PRIu32" [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[9],
-                regc);
+                regc, vm->mr[regc]);
             break;
         }
         case OP10: {
@@ -374,23 +382,21 @@ doop(vm_t *vm)
             break;
         }
         case OP11: {
-            static bool read = true;
-            if (read) {
-                char inputbuf[8];
-                int val = 0;
-                memset(inputbuf, '\0', sizeof(inputbuf));
-                fgets(inputbuf, sizeof(inputbuf), stdin);
-                val = (int)strtoul(inputbuf, NULL, 10);
-                if (val < 0 || val > 255) {
-                    return ERR;
-                }
-                vm->mr[regc] = (uint32_t)val;
-                read = false;
+            char inputbuf[8];
+            int val = 0;
+            memset(inputbuf, '\0', sizeof(inputbuf));
+            fgets(inputbuf, sizeof(inputbuf), stdin);
+            val = (int)strtoul(inputbuf, NULL, 10);
+            if (val < 0 || val > 255) {
+                return ERR;
             }
-            else {
-                vm->mr[regc] = 0xFFFFFFFF;
-                read = true;
-            }
+            vm->mr[regc] = (uint32_t)val;
+#if 0
+            /* set the value of regc to all ones */
+            w |= 0x00000007;
+            /* set regc to all ones and the input */
+            vm->mr[regc] |= 0xFFFFFF00;
+#endif
             printf("%08x %08x %010lu %s %"PRIu32" [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[11],
                 regc, vm->mr[regc]);
