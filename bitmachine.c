@@ -57,27 +57,27 @@ do {                                                                           \
 #endif
 
 /* opcode is given by the bits 28:31 */
-#define OP_MASK  0xF0000000
+#define OP_MASK  0xF0000000U
 
 #define N_REGISTERS 8
 #define MEM_MAX_INDEX ( 1 << 9 )
 #define AS_ARRAY_SIZE ( 1 << 16 )
 
-#define OP0  0x00000000
-#define OP1  0x10000000
-#define OP2  0x20000000
-#define OP3  0x30000000
-#define OP4  0x40000000
-#define OP5  0x50000000
-#define OP6  0x60000000
-#define OP7  0x70000000
-#define OP8  0x80000000
-#define OP9  0x90000000
-#define OP10 0xA0000000
-#define OP11 0xB0000000
-#define OP12 0xC0000000
-#define OP13 0xD0000000
-#define OP14 0xE0000000
+#define OP0  0x00000000U
+#define OP1  0x10000000U
+#define OP2  0x20000000U
+#define OP3  0x30000000U
+#define OP4  0x40000000U
+#define OP5  0x50000000U
+#define OP6  0x60000000U
+#define OP7  0x70000000U
+#define OP8  0x80000000U
+#define OP9  0x90000000U
+#define OP10 0xA0000000U
+#define OP11 0xB0000000U
+#define OP12 0xC0000000U
+#define OP13 0xD0000000U
+#define OP14 0xE0000000U
 
 char *opstrs[32] = {
     "cmov",
@@ -98,9 +98,9 @@ char *opstrs[32] = {
 };
 
 /* register masks */
-#define RA 0x000001C0
-#define RB 0x00000038
-#define RC 0x00000007
+#define RA 0x000001C0U
+#define RB 0x00000038U
+#define RC 0x00000007U
 
 enum {
     SUCCESS = 0,
@@ -152,6 +152,7 @@ vm_construct(vm_t **new)
     tmp->app_size = 0;
     tmp->word_size = sizeof(uint32_t);
     tmp->pc = 0;
+    /* this gets filled in load_app */
     tmp->zero_array = NULL;
     tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(asi_t *));
     tmp->addr_space[0] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
@@ -182,47 +183,16 @@ find_avail_id(vm_t *vm)
         for (j = 0; j < AS_ARRAY_SIZE; ++j) {
             /* we are on to a new array */
             if (NULL == vm->addr_space[i]) {
-#if 0
-                out("           %s: creating new asi_t array @ %d\n", __func__,
-                    i);
-#endif
                 vm->addr_space[i] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
             }
             if (!vm->addr_space[i][j].used) {
                 vm->addr_space[i][j].used = true;
-#if 0
-                out("           %s: found unused spot @ %d %d returned %d\n",
-                    __func__, i, j, (i * AS_ARRAY_SIZE) + j);
-#endif
                 return (i * AS_ARRAY_SIZE) + j;
             }
         }
     }
     /* XXX FIXME */
     return -1;
-}
-
-/* ////////////////////////////////////////////////////////////////////////// */
-static int
-alloc_array(vm_t *vm,
-            size_t nwords,
-            uint32_t *id)
-{
-    int i = -1, j = -1;
-    /* XXX check for valid id */
-    *id = find_avail_id(vm);
-    i = (*id / AS_ARRAY_SIZE);
-    j = (*id % AS_ARRAY_SIZE);
-    vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
-    vm->addr_space[i][j].addp_len = nwords;
-
-#if 0
-    out("           %s: id %lu allocating %lu words @ [%d, %d]\n",
-        __func__, (unsigned long)*id, (unsigned long)nwords, i, j);
-#endif
-
-    return SUCCESS;
-
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -235,10 +205,21 @@ get_array(vm_t *vm,
     *i = (id / AS_ARRAY_SIZE);
     *j = (id % AS_ARRAY_SIZE);
 
-#if 0
-    out("           %s: id %lu ==> [%d, %d]\n", __func__,
-        (unsigned long)id, *i, *j);
-#endif
+    return SUCCESS;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
+alloc_array(vm_t *vm,
+            size_t nwords,
+            uint32_t *id)
+{
+    int i = -1, j = -1;
+    /* XXX check for valid id */
+    *id = find_avail_id(vm);
+    get_array(vm, *id, &i, &j);
+    vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
+    vm->addr_space[i][j].addp_len = nwords;
 
     return SUCCESS;
 }
@@ -248,10 +229,10 @@ static int
 dealloc_array(vm_t *vm,
               uint32_t id)
 {
-    int i = id / AS_ARRAY_SIZE, j = id % AS_ARRAY_SIZE;
-#if 0
-    out("           freeing [%d %d]\n", i, j);
-#endif
+    int i, j;
+    
+    get_array(vm, id, &i, &j);
+
     free(vm->addr_space[i][j].addp);
     vm->addr_space[i][j].addp = NULL;
     vm->addr_space[i][j].used = false;
@@ -267,9 +248,9 @@ doop(vm_t *vm)
     uint32_t w = vm->zero_array[vm->pc];
 
     /* machine register index */
-    uint8_t rega = (w & RA) >> 6; /* 6:8 */
-    uint8_t regb = (w & RB) >> 3; /* 3:5 */
-    uint8_t regc = (w & RC);      /* 0:2 */
+    uint32_t rega = (w & RA) >> 6; /* 6:8 */
+    uint32_t regb = (w & RB) >> 3; /* 3:5 */
+    uint32_t regc = (w & RC);      /* 0:2 */
 
     assert(rega <= 7 && regb <= 7 && regc <= 7);
 
@@ -278,7 +259,7 @@ doop(vm_t *vm)
             if (vm->mr[regc] != 0x00000000U) {
                 vm->mr[rega] = vm->mr[regb];
             }
-            out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8" "
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[0],
                 rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
@@ -291,7 +272,7 @@ doop(vm_t *vm)
                 return ERR;
             }
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
-            out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8"\n",
+            out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32"\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[1],
                 rega, regb, regc);
             break;
