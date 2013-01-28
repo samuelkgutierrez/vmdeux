@@ -339,7 +339,7 @@ doop(vm_t *vm)
             out("%08x %08x %010lu %s %"PRIu8" %"PRIu8" %"PRIu8" "
                 "[0x%08x] [0x%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[6],
-                rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
+                rega, regb, regc, a, b, c); 
             break;
         }
         case OP7:
