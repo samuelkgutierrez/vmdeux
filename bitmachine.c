@@ -350,7 +350,11 @@ doop(vm_t *vm)
         }
         case OP11: {
             static char val = 0;
-            scanf("%c", &val);
+            static int n = 0;
+            n = scanf("%c", &val);
+            if (1 != n) {
+                return ERR;
+            }
             if (EOF == val) {
                 vm->mr[regc] = 0xFFFFFFFF;
             }
