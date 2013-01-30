@@ -346,32 +346,13 @@ doop(vm_t *vm)
             break;
         }
         case OP11: {
-            static int index = 0;
-            static bool need_sanity = true;
             char val = 0;
-            static char buf[8];
-            char *bufp = NULL;
-
-            if (need_sanity) {
-                int tval = 0;
-                index = 0;
-                memset(buf, '\0', sizeof(buf));
-                fgets(buf, sizeof(buf), stdin);
-                tval = (int)strtol(buf, NULL, 10);
-                if (tval < 0 || tval > 255) {
-                    fprintf(stderr, "input must be in the range 0:255\n");
-                    return ERR;
-                }
-            }
-            bufp = buf + index++;
-            sscanf(bufp, "%c", &val);
-            if ('\0' == val) {
+            scanf("%c", &val);
+            if (EOF == val) {
                 vm->mr[regc] = 0xFFFFFFFF;
-                need_sanity = true;
             }
             else {
                 vm->mr[regc] = val;
-                need_sanity = false;
             }
             break;
         }
