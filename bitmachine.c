@@ -260,7 +260,7 @@ doop(vm_t *vm)
                 vm->mr[rega] = vm->mr[regb];
             }
             out("%08x %08x %010lu %s %"PRIu32" %"PRIu32" %"PRIu32" "
-                "[0x%08x] [0x%08x] [0x%08x]\n",
+                "[0x%08x] [0x=%08x] [0x%08x]\n",
                 vm->pc, w, (unsigned long)vm->pc, opstrs[0],
                 rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
             break;
@@ -268,7 +268,11 @@ doop(vm_t *vm)
         case OP1: {
             int i, j;
             get_array(vm, vm->mr[regb], &i, &j);
-            if (vm->mr[regc] >= vm->addr_space[i][j].addp_len) {
+            if (vm->mr[regc] > vm->addr_space[i][j].addp_len) {
+                fprintf(stderr, "array oob @ line %d: "
+                        "requested: %"PRIu32" but max is: %lu\n",
+                        __LINE__, vm->mr[regc],
+                        (unsigned long)vm->addr_space[i][j].addp_len);
                 return ERR;
             }
             vm->mr[rega] = vm->addr_space[i][j].addp[vm->mr[regc]];
@@ -281,7 +285,11 @@ doop(vm_t *vm)
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
-            if (vm->mr[regb] >= vm->addr_space[i][j].addp_len) {
+            if (vm->mr[regb] > vm->addr_space[i][j].addp_len) {
+                fprintf(stderr, "array oob @ line %d: "
+                        "requested: %"PRIu32" but max is: %lu\n",
+                        __LINE__, vm->mr[regb],
+                        (unsigned long)vm->addr_space[i][j].addp_len);
                 return ERR;
             }
             vm->addr_space[i][j].addp[vm->mr[regb]] = vm->mr[regc];
@@ -317,6 +325,7 @@ doop(vm_t *vm)
             uint32_t a = vm->mr[rega], b = vm->mr[regb], c = vm->mr[regc];
 
             if (0 == c) {
+                fprintf(stderr, "div by 0 @ %d\n", __LINE__);
                 return ERR;
             }
             a = b / c;
@@ -360,6 +369,7 @@ doop(vm_t *vm)
         }
         case OP9: {
             if (SUCCESS != dealloc_array(vm, vm->mr[regc])) {
+                fprintf(stderr, "dealloc array failure @ %d\n", __LINE__);
                 return ERR;
             }
             out("%08x %08x %010lu %s %"PRIu32" [0x%08x]\n",
@@ -447,7 +457,7 @@ doop(vm_t *vm)
             break;
         }
         default:
-            out("INVALID OP!\n");
+            fprintf(stderr, "invalid op @ %d\n", __LINE__);
             return ERR_IOOB;
     }
     vm->pc++;
