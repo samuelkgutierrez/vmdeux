@@ -15,5 +15,7 @@ ${TARGET}: redblack.o
 
 redblack.o: redblack.h redblack.c
 
+test-rb: redblack.o
+
 clean:
 	/bin/rm -f ${TARGET} *.o
