@@ -79,6 +79,11 @@ do {                                                                           \
 #define OP13 0xD0000000U
 #define OP14 0xE0000000U
 
+/* register masks */
+#define RA 0x000001C0U
+#define RB 0x00000038U
+#define RC 0x00000007U
+
 char *opstrs[32] = {
     "cmov",
     "aidx",
@@ -96,11 +101,6 @@ char *opstrs[32] = {
     "loadimm",
     NULL
 };
-
-/* register masks */
-#define RA 0x000001C0U
-#define RB 0x00000038U
-#define RC 0x00000007U
 
 enum {
     SUCCESS = 0,
@@ -174,7 +174,7 @@ vm_destruct(vm_t *vm)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-static uint32_t
+static inline uint32_t
 find_avail_id(vm_t *vm)
 {
     int i, j;
@@ -196,7 +196,7 @@ find_avail_id(vm_t *vm)
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-static int
+static inline int
 get_array(vm_t *vm,
           uint32_t id,
           int *i,
@@ -209,7 +209,7 @@ get_array(vm_t *vm,
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-static int
+static inline int
 alloc_array(vm_t *vm,
             size_t nwords,
             uint32_t *id)
@@ -225,7 +225,7 @@ alloc_array(vm_t *vm,
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-static int
+static inline int
 dealloc_array(vm_t *vm,
               uint32_t id)
 {
@@ -242,7 +242,7 @@ dealloc_array(vm_t *vm,
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-int
+static int
 doop(vm_t *vm)
 {
     uint32_t w = vm->zero_array[vm->pc];
