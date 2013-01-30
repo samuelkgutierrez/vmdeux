@@ -129,7 +129,7 @@ typedef struct vm_t {
     /* program counter */
     uint32_t pc;
     /* points to zero array */
-    uint32_t *zero_array;
+    asi_t *zero_array;
     /*address space */
     asi_t **addr_space;
 } vm_t;
@@ -167,11 +167,11 @@ vm_construct(vm_t **new)
     tmp->word_size = sizeof(uint32_t);
     tmp->pc = 0;
     /* this gets filled in load_app */
-    tmp->zero_array = NULL;
     tmp->addr_space = calloc(AS_ARRAY_SIZE, sizeof(asi_t *));
     tmp->addr_space[0] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
-    /* mark as used because we don't want any zero array confusion madness */
-    tmp->addr_space[0][0].used = true;
+    tmp->zero_array = &(tmp->addr_space[0][0]);
+    /* marks as used because it will be */
+    tmp->zero_array->used = true;
 
     *new = tmp;
 
@@ -200,7 +200,6 @@ find_avail_id(vm_t *vm)
                 vm->addr_space[i] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
             }
             if (!vm->addr_space[i][j].used) {
-                vm->addr_space[i][j].used = true;
                 return (i * AS_ARRAY_SIZE) + j;
             }
         }
@@ -234,6 +233,7 @@ alloc_array(vm_t *vm,
     get_array(vm, *id, &i, &j);
     vm->addr_space[i][j].addp = calloc(nwords, vm->word_size);
     vm->addr_space[i][j].addp_len = nwords;
+    vm->addr_space[i][j].used = true;
 
     return SUCCESS;
 }
@@ -259,7 +259,7 @@ dealloc_array(vm_t *vm,
 static int
 doop(vm_t *vm)
 {
-    uint32_t w = vm->zero_array[vm->pc];
+    uint32_t w = vm->zero_array->addp[vm->pc];
 
     /* machine register index */
     uint32_t rega = (w & RA) >> 6; /* 6:8 */
@@ -376,20 +376,21 @@ doop(vm_t *vm)
             break;
         }
         case OP12: {
-            int i = 0, j = 0;
-
             /* if we are given the zero array, there is nothing to do */
             if (0 != vm->mr[regb]) {
-                uint32_t *tmp_zarray = NULL;
+                uint32_t *new_addp = NULL;
+                int i = 0, j = 0;
                 size_t len = 0, k = 0;
                 get_array(vm, vm->mr[regb], &i, &j);
                 len = vm->addr_space[i][j].addp_len;
-                tmp_zarray = calloc(len, sizeof(uint32_t));
+                new_addp = calloc(len, vm->word_size);
+                /* XXX memmove, check for NULLs, and add asi_t con, des, cp */
                 for (k = 0; k < len; ++k) {
-                    tmp_zarray[k] = vm->addr_space[i][j].addp[k];
+                    new_addp[k] = vm->addr_space[i][j].addp[k];
                 }
-                free(vm->zero_array);
-                vm->zero_array = tmp_zarray;
+                free(vm->zero_array->addp);
+                vm->zero_array->addp = new_addp;
+                vm->zero_array->addp_len = len;
             }
             /* else we are dealing with the current zero array */
             vm->pc = vm->mr[regc];
@@ -448,11 +449,12 @@ load_app(vm_t *vm, const char *exe)
         }
         /* else all is well, so append word to program "0" array */
         /* NOTE: a small over allocation... just by one (so no malloc 0) */
-        vm->zero_array = realloc(vm->zero_array,
-                                 (word_index + 1) * vm->word_size);
-        vm->zero_array[word_index++] = htonl(ibuf);
+        vm->zero_array->addp = realloc(vm->zero_array->addp,
+                                       (word_index + 1) * vm->word_size);
+        vm->zero_array->addp[word_index++] = htonl(ibuf);
     }
     vm->app_size = word_index * vm->word_size;
+    vm->zero_array->addp_len = word_index;
 
 out:
     if (-1 != fd) {
