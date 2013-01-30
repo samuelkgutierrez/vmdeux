@@ -56,6 +56,9 @@ do {                                                                           \
 } while (0)
 #endif
 
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
 /* opcode is given by the bits 28:31 */
 #define OP_MASK  0xF0000000U
 
@@ -196,7 +199,7 @@ find_avail_id(vm_t *vm)
     for (i = 0; i < AS_ARRAY_SIZE; ++i) {
         for (j = 0; j < AS_ARRAY_SIZE; ++j) {
             /* we are on to a new array */
-            if (NULL == vm->addr_space[i]) {
+            if (unlikely(NULL == vm->addr_space[i])) {
                 vm->addr_space[i] = calloc(AS_ARRAY_SIZE, sizeof(asi_t));
             }
             if (!vm->addr_space[i][j].used) {
@@ -248,7 +251,6 @@ dealloc_array(vm_t *vm,
     get_array(vm, id, &i, &j);
 
     free(vm->addr_space[i][j].addp);
-    vm->addr_space[i][j].addp = NULL;
     vm->addr_space[i][j].used = false;
     vm->addr_space[i][j].addp_len = 0;
 
@@ -259,12 +261,14 @@ dealloc_array(vm_t *vm,
 static int
 doop(vm_t *vm)
 {
-    uint32_t w = vm->zero_array->addp[vm->pc];
+
+    static uint32_t rega = 0, regb = 0, regc = 0, w = 0;
+    w = vm->zero_array->addp[vm->pc];
 
     /* machine register index */
-    uint32_t rega = (w & RA) >> 6; /* 6:8 */
-    uint32_t regb = (w & RB) >> 3; /* 3:5 */
-    uint32_t regc = (w & RC);      /* 0:2 */
+    rega = (w & RA) >> 6; /* 6:8 */
+    regb = (w & RB) >> 3; /* 3:5 */
+    regc = (w & RC);      /* 0:2 */
 
     switch (w & OP_MASK) {
         case OP0: {
@@ -276,7 +280,7 @@ doop(vm_t *vm)
         case OP1: {
             int i, j;
             get_array(vm, vm->mr[regb], &i, &j);
-            if (vm->mr[regc] >= vm->addr_space[i][j].addp_len) {
+            if (unlikely(vm->mr[regc] >= vm->addr_space[i][j].addp_len)) {
                 fprintf(stderr, "array oob @ line %d: "
                         "requested: %"PRIu32" but max is: %lu\n",
                         __LINE__, vm->mr[regc],
@@ -289,7 +293,7 @@ doop(vm_t *vm)
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
-            if (vm->mr[regb] >= vm->addr_space[i][j].addp_len) {
+            if (unlikely(vm->mr[regb] >= vm->addr_space[i][j].addp_len)) {
                 fprintf(stderr, "array oob @ line %d: "
                         "requested: %"PRIu32" but max is: %lu\n",
                         __LINE__, vm->mr[regb],
@@ -308,7 +312,7 @@ doop(vm_t *vm)
             break;
         }
         case OP5: {
-            if (0 == vm->mr[regc]) {
+            if (unlikely(0 == vm->mr[regc])) {
                 fprintf(stderr, "div by 0 @ %d\n", __LINE__);
                 return ERR;
             }
@@ -326,7 +330,7 @@ doop(vm_t *vm)
         case OP7:
             return HALT;
         case OP8: {
-            uint32_t id = 0;
+            static uint32_t id = 0;
             if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
                 return ERR;
             }
@@ -341,12 +345,11 @@ doop(vm_t *vm)
             break;
         }
         case OP10: {
-            char out = vm->mr[regc] % 256;
-            printf("%c", out);
+            printf("%c", (char)vm->mr[regc]);
             break;
         }
         case OP11: {
-            char val = 0;
+            static char val = 0;
             scanf("%c", &val);
             if (EOF == val) {
                 vm->mr[regc] = 0xFFFFFFFF;
@@ -361,14 +364,13 @@ doop(vm_t *vm)
             if (0 != vm->mr[regb]) {
                 uint32_t *new_addp = NULL;
                 int i = 0, j = 0;
-                size_t len = 0, k = 0;
+                size_t len = 0;
                 get_array(vm, vm->mr[regb], &i, &j);
                 len = vm->addr_space[i][j].addp_len;
                 new_addp = calloc(len, vm->word_size);
-                /* XXX memmove, check for NULLs, and add asi_t con, des, cp */
-                for (k = 0; k < len; ++k) {
-                    new_addp[k] = vm->addr_space[i][j].addp[k];
-                }
+                /* XXX check for NULLs, and add asi_t con, des, cp */
+                (void)memmove(new_addp, vm->addr_space[i][j].addp,
+                              vm->addr_space[i][j].addp_len * vm->word_size);
                 free(vm->zero_array->addp);
                 vm->zero_array->addp = new_addp;
                 vm->zero_array->addp_len = len;
