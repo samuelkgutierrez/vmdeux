@@ -1,9 +1,9 @@
 SHELL  = /bin/sh
 TARGET = bitmachine
 CFLAGS = -Wall -g -O0
-CFLAGS = -Wall -DNDEBUG -O3
+CFLAGS = -Wall -DNDEBUG -Ofast
 # gprof
-CFLAGS = -Wall -g -pg
+#CFLAGS = -Wall -g -pg
 
 .SUFFIXES:
 .SUFFIXES: .c .o
