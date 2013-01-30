@@ -11,5 +11,9 @@ CFLAGS = -Wall -DNDEBUG -Ofast
 
 all: ${TARGET}
 
+${TARGET}: redblack.o
+
+redblack.o: redblack.h redblack.c
+
 clean:
-	/bin/rm -f ${TARGET}
+	/bin/rm -f ${TARGET} *.o
