@@ -268,7 +268,7 @@ doop(vm_t *vm)
         case OP1: {
             int i, j;
             get_array(vm, vm->mr[regb], &i, &j);
-            if (vm->mr[regc] > vm->addr_space[i][j].addp_len) {
+            if (vm->mr[regc] >= vm->addr_space[i][j].addp_len) {
                 fprintf(stderr, "array oob @ line %d: "
                         "requested: %"PRIu32" but max is: %lu\n",
                         __LINE__, vm->mr[regc],
@@ -285,7 +285,7 @@ doop(vm_t *vm)
         case OP2: {
             int i, j;
             get_array(vm, vm->mr[rega], &i, &j);
-            if (vm->mr[regb] > vm->addr_space[i][j].addp_len) {
+            if (vm->mr[regb] >= vm->addr_space[i][j].addp_len) {
                 fprintf(stderr, "array oob @ line %d: "
                         "requested: %"PRIu32" but max is: %lu\n",
                         __LINE__, vm->mr[regb],
