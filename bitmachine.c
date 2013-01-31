@@ -578,7 +578,6 @@ load_app(vm_t *vm, const char *exe)
             goto out;
         }
         /* else all is well, so append word to program "0" array */
-        /* NOTE: a small over allocation... just by one (so no malloc 0) */
         zap->addp[word_index++] = htonl(ibuf);
     }
     /* finish setting up vm state */
