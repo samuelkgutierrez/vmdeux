@@ -40,19 +40,19 @@ struct rbtree {
     struct rbnode nil;
 };
 
-#define rbapply(t, f, c, o)	rbapply_node((t), (t)->root.left, (f), (c), (o))
-#define rbisempty(t)		((t)->root.left == &(t)->nil && (t)->root.right == &(t)->nil)
-#define rbfirst(t)		((t)->root.left)
-#define rbroot(t)		(&(t)->root)
-#define rbnil(t)		(&(t)->nil)
+#define rbapply(t, f, c, o) rbapply_node((t), (t)->root.left, (f), (c), (o))
+#define rbisempty(t)        ((t)->root.left == &(t)->nil && (t)->root.right == &(t)->nil)
+#define rbfirst(t)      ((t)->root.left)
+#define rbroot(t)       (&(t)->root)
+#define rbnil(t)        (&(t)->nil)
 
-void *rbdelete			__P((struct rbtree *, struct rbnode *));
-int rbapply_node		__P((struct rbtree *, struct rbnode *,
-				    int (*)(void *, void *), void *,
-				    enum rbtraversal));
-struct rbnode *rbfind		__P((struct rbtree *, void *));
-struct rbnode *rbinsert		__P((struct rbtree *, void *));
-struct rbtree *rbcreate		__P((int (*)(const void *, const void *)));
-void rbdestroy			__P((struct rbtree *, void (*)(void *)));
+void *rbdelete          __P((struct rbtree *, struct rbnode *));
+int rbapply_node        __P((struct rbtree *, struct rbnode *,
+                             int ( *)(void *, void *), void *,
+                             enum rbtraversal));
+struct rbnode *rbfind       __P((struct rbtree *, void *));
+struct rbnode *rbinsert     __P((struct rbtree *, void *));
+struct rbtree *rbcreate     __P((int ( *)(const void *, const void *)));
+void rbdestroy          __P((struct rbtree *, void ( *)(void *)));
 
 #endif /* _SUDO_REDBLACK_H */

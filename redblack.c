@@ -48,11 +48,11 @@
 
 #include "redblack.h"
 
-static void rbrepair		__P((struct rbtree *, struct rbnode *));
-static void rotate_left		__P((struct rbtree *, struct rbnode *));
-static void rotate_right	__P((struct rbtree *, struct rbnode *));
-static void _rbdestroy		__P((struct rbtree *, struct rbnode *,
-				    void (*)(void *)));
+static void rbrepair        __P((struct rbtree *, struct rbnode *));
+static void rotate_left     __P((struct rbtree *, struct rbnode *));
+static void rotate_right    __P((struct rbtree *, struct rbnode *));
+static void _rbdestroy      __P((struct rbtree *, struct rbnode *,
+                                 void ( *)(void *)));
 
 /*
  * Red-Black tree, see http://en.wikipedia.org/wiki/Red-black_tree
@@ -78,7 +78,7 @@ static void _rbdestroy		__P((struct rbtree *, struct rbnode *,
  */
 struct rbtree *
 rbcreate(compar)
-    int (*compar)__P((const void *, const void*));
+int (*compar)__P((const void *, const void *));
 {
     struct rbtree *tree;
 
@@ -109,22 +109,25 @@ rbcreate(compar)
  */
 static void
 rotate_left(tree, node)
-    struct rbtree *tree;
-    struct rbnode *node;
+struct rbtree *tree;
+struct rbnode *node;
 {
     struct rbnode *child;
 
     child = node->right;
     node->right = child->left;
 
-    if (child->left != rbnil(tree))
+    if (child->left != rbnil(tree)) {
         child->left->parent = node;
+    }
     child->parent = node->parent;
 
-    if (node == node->parent->left)
-	node->parent->left = child;
-    else
-	node->parent->right = child;
+    if (node == node->parent->left) {
+        node->parent->left = child;
+    }
+    else {
+        node->parent->right = child;
+    }
     child->left = node;
     node->parent = child;
 }
@@ -134,22 +137,25 @@ rotate_left(tree, node)
  */
 static void
 rotate_right(tree, node)
-    struct rbtree *tree;
-    struct rbnode *node;
+struct rbtree *tree;
+struct rbnode *node;
 {
     struct rbnode *child;
 
     child = node->left;
     node->left = child->right;
 
-    if (child->right != rbnil(tree))
+    if (child->right != rbnil(tree)) {
         child->right->parent = node;
+    }
     child->parent = node->parent;
 
-    if (node == node->parent->left)
-	node->parent->left = child;
-    else
-	node->parent->right = child;
+    if (node == node->parent->left) {
+        node->parent->left = child;
+    }
+    else {
+        node->parent->right = child;
+    }
     child->right = node;
     node->parent = child;
 }
@@ -161,8 +167,8 @@ rotate_right(tree, node)
  */
 struct rbnode *
 rbinsert(tree, data)
-    struct rbtree *tree;
-    void *data;
+struct rbtree *tree;
+void *data;
 {
     struct rbnode *node = rbfirst(tree);
     struct rbnode *parent = rbroot(tree);
@@ -170,20 +176,23 @@ rbinsert(tree, data)
 
     /* Find correct insertion point. */
     while (node != rbnil(tree)) {
-	parent = node;
-	if ((res = tree->compar(data, node->data)) == 0)
-	    return(node);
-	node = res < 0 ? node->left : node->right;
+        parent = node;
+        if ((res = tree->compar(data, node->data)) == 0) {
+            return(node);
+        }
+        node = res < 0 ? node->left : node->right;
     }
 
     node = (struct rbnode *) malloc(sizeof(*node));
     node->data = data;
     node->left = node->right = rbnil(tree);
     node->parent = parent;
-    if (parent == rbroot(tree) || tree->compar(data, parent->data) < 0)
-	parent->left = node;
-    else
-	parent->right = node;
+    if (parent == rbroot(tree) || tree->compar(data, parent->data) < 0) {
+        parent->left = node;
+    }
+    else {
+        parent->right = node;
+    }
     node->color = red;
 
     /*
@@ -192,7 +201,7 @@ rbinsert(tree, data)
      * the rest of the tree to make sure none of the required properties
      * is violated.
      *
-     *	1) The uncle is red.  We repaint both the parent and uncle black
+     *  1) The uncle is red.  We repaint both the parent and uncle black
      *     and repaint the grandparent node red.
      *
      *  2) The uncle is black and the new node is the right child of its
@@ -210,42 +219,45 @@ rbinsert(tree, data)
      * need to worry about replacing the root.
      */
     while (node->parent->color == red) {
-	struct rbnode *uncle;
-	if (node->parent == node->parent->parent->left) {
-	    uncle = node->parent->parent->right;
-	    if (uncle->color == red) {
-		node->parent->color = black;
-		uncle->color = black;
-		node->parent->parent->color = red;
-		node = node->parent->parent;
-	    } else /* if (uncle->color == black) */ {
-		if (node == node->parent->right) {
-		    node = node->parent;
-		    rotate_left(tree, node);
-		}
-		node->parent->color = black;
-		node->parent->parent->color = red;
-		rotate_right(tree, node->parent->parent);
-	    }
-	} else { /* if (node->parent == node->parent->parent->right) */
-	    uncle = node->parent->parent->left;
-	    if (uncle->color == red) {
-		node->parent->color = black;
-		uncle->color = black;
-		node->parent->parent->color = red;
-		node = node->parent->parent;
-	    } else /* if (uncle->color == black) */ {
-		if (node == node->parent->left) {
-		    node = node->parent;
-		    rotate_right(tree, node);
-		}
-		node->parent->color = black;
-		node->parent->parent->color = red;
-		rotate_left(tree, node->parent->parent);
-	    }
-	}
+        struct rbnode *uncle;
+        if (node->parent == node->parent->parent->left) {
+            uncle = node->parent->parent->right;
+            if (uncle->color == red) {
+                node->parent->color = black;
+                uncle->color = black;
+                node->parent->parent->color = red;
+                node = node->parent->parent;
+            }
+            else { /* if (uncle->color == black) */
+                if (node == node->parent->right) {
+                    node = node->parent;
+                    rotate_left(tree, node);
+                }
+                node->parent->color = black;
+                node->parent->parent->color = red;
+                rotate_right(tree, node->parent->parent);
+            }
+        }
+        else {   /* if (node->parent == node->parent->parent->right) */
+            uncle = node->parent->parent->left;
+            if (uncle->color == red) {
+                node->parent->color = black;
+                uncle->color = black;
+                node->parent->parent->color = red;
+                node = node->parent->parent;
+            }
+            else { /* if (uncle->color == black) */
+                if (node == node->parent->left) {
+                    node = node->parent;
+                    rotate_right(tree, node);
+                }
+                node->parent->color = black;
+                node->parent->parent->color = red;
+                rotate_left(tree, node->parent->parent);
+            }
+        }
     }
-    rbfirst(tree)->color = black;	/* first node is always black */
+    rbfirst(tree)->color = black;   /* first node is always black */
     return(NULL);
 }
 
@@ -255,16 +267,17 @@ rbinsert(tree, data)
  */
 struct rbnode *
 rbfind(tree, key)
-    struct rbtree *tree;
-    void *key;
+struct rbtree *tree;
+void *key;
 {
     struct rbnode *node = rbfirst(tree);
     int res;
 
     while (node != rbnil(tree)) {
-	if ((res = tree->compar(key, node->data)) == 0)
-	    return(node);
-	node = res < 0 ? node->left : node->right;
+        if ((res = tree->compar(key, node->data)) == 0) {
+            return(node);
+        }
+        node = res < 0 ? node->left : node->right;
     }
     return(NULL);
 }
@@ -276,28 +289,33 @@ rbfind(tree, key)
  */
 int
 rbapply_node(tree, node, func, cookie, order)
-    struct rbtree *tree;
-    struct rbnode *node;
-    int (*func)__P((void *, void *));
-    void *cookie;
-    enum rbtraversal order;
+struct rbtree *tree;
+struct rbnode *node;
+int (*func)__P((void *, void *));
+void *cookie;
+enum rbtraversal order;
 {
     int error;
 
     if (node != rbnil(tree)) {
-	if (order == preorder)
-	    if ((error = func(node->data, cookie)) != 0)
-		return(error);
-	if ((error = rbapply_node(tree, node->left, func, cookie, order)) != 0)
-	    return(error);
-	if (order == inorder)
-	    if ((error = func(node->data, cookie)) != 0)
-		return(error);
-	if ((error = rbapply_node(tree, node->right, func, cookie, order)) != 0)
-	    return(error);
-	if (order == postorder)
-	    if ((error = func(node->data, cookie)) != 0)
-		return(error);
+        if (order == preorder)
+            if ((error = func(node->data, cookie)) != 0) {
+                return(error);
+            }
+        if ((error = rbapply_node(tree, node->left, func, cookie, order)) != 0) {
+            return(error);
+        }
+        if (order == inorder)
+            if ((error = func(node->data, cookie)) != 0) {
+                return(error);
+            }
+        if ((error = rbapply_node(tree, node->right, func, cookie, order)) != 0) {
+            return(error);
+        }
+        if (order == postorder)
+            if ((error = func(node->data, cookie)) != 0) {
+                return(error);
+            }
     }
     return (0);
 }
@@ -307,20 +325,24 @@ rbapply_node(tree, node, func, cookie, order)
  */
 static struct rbnode *
 rbsuccessor(tree, node)
-    struct rbtree *tree;
-    struct rbnode *node;
+struct rbtree *tree;
+struct rbnode *node;
 {
     struct rbnode *succ;
 
     if ((succ = node->right) != rbnil(tree)) {
-	while (succ->left != rbnil(tree))
-	    succ = succ->left;
-    } else {
-	/* No right child, move up until we find it or hit the root */
-	for (succ = node->parent; node == succ->right; succ = succ->parent)
-	    node = succ;
-	if (succ == rbroot(tree))
-	    succ = rbnil(tree);
+        while (succ->left != rbnil(tree)) {
+            succ = succ->left;
+        }
+    }
+    else {
+        /* No right child, move up until we find it or hit the root */
+        for (succ = node->parent; node == succ->right; succ = succ->parent) {
+            node = succ;
+        }
+        if (succ == rbroot(tree)) {
+            succ = rbnil(tree);
+        }
     }
     return(succ);
 }
@@ -330,16 +352,17 @@ rbsuccessor(tree, node)
  */
 static void
 _rbdestroy(tree, node, destroy)
-    struct rbtree *tree;
-    struct rbnode *node;
-    void (*destroy)__P((void *));
+struct rbtree *tree;
+struct rbnode *node;
+void (*destroy)__P((void *));
 {
     if (node != rbnil(tree)) {
-	_rbdestroy(tree, node->left, destroy);
-	_rbdestroy(tree, node->right, destroy);
-	if (destroy != NULL)
-	    destroy(node->data);
-	free(node);
+        _rbdestroy(tree, node->left, destroy);
+        _rbdestroy(tree, node->right, destroy);
+        if (destroy != NULL) {
+            destroy(node->data);
+        }
+        free(node);
     }
 }
 
@@ -349,8 +372,8 @@ _rbdestroy(tree, node, destroy)
  */
 void
 rbdestroy(tree, destroy)
-    struct rbtree *tree;
-    void (*destroy)__P((void *));
+struct rbtree *tree;
+void (*destroy)__P((void *));
 {
     _rbdestroy(tree, rbfirst(tree), destroy);
     free(tree);
@@ -360,41 +383,49 @@ rbdestroy(tree, destroy)
  * Delete node 'z' from the tree and return its data pointer.
  */
 void *rbdelete(tree, z)
-    struct rbtree *tree;
-    struct rbnode *z;
+struct rbtree *tree;
+struct rbnode *z;
 {
     struct rbnode *x, *y;
     void *data = z->data;
 
-    if (z->left == rbnil(tree) || z->right == rbnil(tree))
-	y = z;
-    else
-	y = rbsuccessor(tree, z);
+    if (z->left == rbnil(tree) || z->right == rbnil(tree)) {
+        y = z;
+    }
+    else {
+        y = rbsuccessor(tree, z);
+    }
     x = (y->left == rbnil(tree)) ? y->right : y->left;
 
     if ((x->parent = y->parent) == rbroot(tree)) {
-	rbfirst(tree) = x;
-    } else {
-	if (y == y->parent->left)
-	    y->parent->left = x;
-	else
-	    y->parent->right = x;
+        rbfirst(tree) = x;
     }
-    if (y->color == black)
-	rbrepair(tree, x);
+    else {
+        if (y == y->parent->left) {
+            y->parent->left = x;
+        }
+        else {
+            y->parent->right = x;
+        }
+    }
+    if (y->color == black) {
+        rbrepair(tree, x);
+    }
     if (y != z) {
-	y->left = z->left;
-	y->right = z->right;
-	y->parent = z->parent;
-	y->color = z->color;
-	z->left->parent = z->right->parent = y;
-	if (z == z->parent->left)
-	    z->parent->left = y; 
-	else
-	    z->parent->right = y;
+        y->left = z->left;
+        y->right = z->right;
+        y->parent = z->parent;
+        y->color = z->color;
+        z->left->parent = z->right->parent = y;
+        if (z == z->parent->left) {
+            z->parent->left = y;
+        }
+        else {
+            z->parent->right = y;
+        }
     }
-    free(z); 
-    
+    free(z);
+
     return (data);
 }
 
@@ -404,61 +435,64 @@ void *rbdelete(tree, z)
  */
 static void
 rbrepair(tree, node)
-    struct rbtree *tree;
-    struct rbnode *node;
+struct rbtree *tree;
+struct rbnode *node;
 {
     struct rbnode *sibling;
 
     while (node->color == black && node != rbroot(tree)) {
-	if (node == node->parent->left) {
-	    sibling = node->parent->right;
-	    if (sibling->color == red) {
-		sibling->color = black;
-		node->parent->color = red;
-		rotate_left(tree, node->parent);
-		sibling = node->parent->right;
-	    }
-	    if (sibling->right->color == black && sibling->left->color == black) {
-		sibling->color = red;
-		node = node->parent;
-	    } else {
-		if (sibling->right->color == black) {
-		      sibling->left->color = black;
-		      sibling->color = red;
-		      rotate_right(tree, sibling);
-		      sibling = node->parent->right;
-		}
-		sibling->color = node->parent->color;
-		node->parent->color = black;
-		sibling->right->color = black;
-		rotate_left(tree, node->parent);
-		node = rbroot(tree); /* exit loop */
-	    }
-	} else { /* if (node == node->parent->right) */
-	    sibling = node->parent->left;
-	    if (sibling->color == red) {
-		sibling->color = black;
-		node->parent->color = red;
-		rotate_right(tree, node->parent);
-		sibling = node->parent->left;
-	    }
-	    if (sibling->right->color == black && sibling->left->color == black) {
-		sibling->color = red;
-		node = node->parent;
-	    } else {
-		if (sibling->left->color == black) {
-		    sibling->right->color = black;
-		    sibling->color = red;
-		    rotate_left(tree, sibling);
-		    sibling = node->parent->left;
-		}
-		sibling->color = node->parent->color;
-		node->parent->color = black;
-		sibling->left->color = black;
-		rotate_right(tree, node->parent);
-		node = rbroot(tree); /* exit loop */
-	    }
-	}
+        if (node == node->parent->left) {
+            sibling = node->parent->right;
+            if (sibling->color == red) {
+                sibling->color = black;
+                node->parent->color = red;
+                rotate_left(tree, node->parent);
+                sibling = node->parent->right;
+            }
+            if (sibling->right->color == black && sibling->left->color == black) {
+                sibling->color = red;
+                node = node->parent;
+            }
+            else {
+                if (sibling->right->color == black) {
+                    sibling->left->color = black;
+                    sibling->color = red;
+                    rotate_right(tree, sibling);
+                    sibling = node->parent->right;
+                }
+                sibling->color = node->parent->color;
+                node->parent->color = black;
+                sibling->right->color = black;
+                rotate_left(tree, node->parent);
+                node = rbroot(tree); /* exit loop */
+            }
+        }
+        else {   /* if (node == node->parent->right) */
+            sibling = node->parent->left;
+            if (sibling->color == red) {
+                sibling->color = black;
+                node->parent->color = red;
+                rotate_right(tree, node->parent);
+                sibling = node->parent->left;
+            }
+            if (sibling->right->color == black && sibling->left->color == black) {
+                sibling->color = red;
+                node = node->parent;
+            }
+            else {
+                if (sibling->left->color == black) {
+                    sibling->right->color = black;
+                    sibling->color = red;
+                    rotate_left(tree, sibling);
+                    sibling = node->parent->left;
+                }
+                sibling->color = node->parent->color;
+                node->parent->color = black;
+                sibling->left->color = black;
+                rotate_right(tree, node->parent);
+                node = rbroot(tree); /* exit loop */
+            }
+        }
     }
     node->color = black;
 }
