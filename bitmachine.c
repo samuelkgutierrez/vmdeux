@@ -174,7 +174,7 @@ asi_construct(const vm_t *vm,
     *newa = tmp;
     return SUCCESS;
 }
-              
+
 /* ////////////////////////////////////////////////////////////////////////// */
 /* callback for asi_t compares */
 static int
@@ -258,7 +258,6 @@ getid(const vm_t *vm,
     static uint32_t tid = 0;
 
     do {
-        //tid = (uint32_t)(rand() % 0xFFFFFFFFU);
         tid += 1;
     } while (idtaken(vm, tid));
     /* at this point we should have a valid id */
@@ -280,7 +279,6 @@ alloc_array(vm_t *vm,
     /* not dealing with zero array */
     if (NULL != id) {
         if (SUCCESS != (rc = getid(vm, &aid))) {
-            out("ERR @ %d\n", __LINE__);
             return rc;
         }
     }
@@ -333,14 +331,12 @@ dealloc_array(vm_t *vm,
         return ERR;
     }
 
-
     target = find_node(vm, id);
 
-    if (NULL == target) {
+    if (unlikely(NULL == target)) {
         fprintf(stderr, "freeing unalloc'd array\n");
         return ERR;
     }
-    /* XXX add frees here? */
     data = rbdelete(vm->as, target);
     free(data->addp);
     free(data);
@@ -357,8 +353,7 @@ getasip(const vm_t *vm,
 
     node = find_node(vm, id);
 
-    if (NULL == node) {
-        out("ERR @ %d\n", __LINE__);
+    if (unlikely(NULL == node)) {
         return NULL;
     }
     else {
@@ -392,13 +387,10 @@ doop(vm_t *vm)
         }
         case OP1: {
             asi_t *asi = getasip(vm, vm->mr[regb]);
-            if (NULL == asi) {
-                out("ERR @ %d: req: %lu\n", __LINE__,
-                    (unsigned long)vm->mr[regb]);
-                assert(0);
+            if (unlikely(NULL == asi)) {
                 return ERR;
             }
-            if (vm->mr[regc] >= asi->addp_len) {
+            if (unlikely(vm->mr[regc] >= asi->addp_len)) {
                 fprintf(stderr, "array oob @ line %d: "
                         "requested: %"PRIu32" but max is: %lu\n",
                         __LINE__, vm->mr[regc],
@@ -410,10 +402,10 @@ doop(vm_t *vm)
         }
         case OP2: {
             asi_t *asi = getasip(vm, vm->mr[rega]);
-            if (NULL == asi) {
+            if (unlikely(NULL == asi)) {
                 return ERR;
             }
-            if (vm->mr[regb] >= asi->addp_len) {
+            if (unlikely(vm->mr[regb] >= asi->addp_len)) {
                 fprintf(stderr, "array oob @ line %d: "
                         "requested: %"PRIu32" but max is: %lu\n",
                         __LINE__, vm->mr[regb],
@@ -629,10 +621,6 @@ go(const char *exe)
 {
     int rc = SUCCESS;
     vm_t *vm = NULL;
-
-    /* XXX RM */
-    //srand((unsigned int)time(NULL));
-    srand((unsigned int)0);
 
     if (SUCCESS != (rc = vm_construct(&vm))) {
         fprintf(stderr, "vm_construct error: %d\n", rc);
