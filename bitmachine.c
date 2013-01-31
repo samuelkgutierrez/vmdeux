@@ -371,12 +371,10 @@ static int
 doop(vm_t *vm)
 {
 
-    static uint32_t times = 0;
     static uint32_t rega = 0, regb = 0, regc = 0, w = 0;
+    static asi_t *z = NULL;
 
-    //if (++times == 1024 * 4) return ERR;
-
-    asi_t *z = getasip(vm, 0);
+    z = getasip(vm, 0);
 
     w = z->addp[vm->pc];
 
@@ -489,8 +487,6 @@ doop(vm_t *vm)
             if (0 != vm->mr[regb]) {
                 asi_t *za = NULL;
                 asi_t *newp = NULL;
-
-                fprintf(stderr, "OP12: %lu\n", (unsigned long)vm->mr[regb]);
 
                 if (NULL == (newp = getasip(vm, vm->mr[regb]))) {
                     out("ERR @ %d\n", __LINE__);
