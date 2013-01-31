@@ -1,0 +1,7 @@
+bitmachine
+
+build:
+make
+
+run:
+./bitmachine [APP]
