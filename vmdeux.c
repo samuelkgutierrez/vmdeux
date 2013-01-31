@@ -31,7 +31,7 @@
 
 #include "redblack.h"
 
-#define PACKAGE     "bitmachine"
+#define PACKAGE     "vmdeux"
 #define PACKAGE_VER "0.1"
 
 #define STRINGIFY(x) #x
