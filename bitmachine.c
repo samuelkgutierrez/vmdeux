@@ -133,8 +133,6 @@ typedef struct vm_t {
     uint32_t mr[N_REGISTERS];
     /* program counter */
     uint32_t pc;
-    /* points to zero array */
-    asi_t *zero_array;
     /* address space using a red-black tree */
     struct rbtree *as;
 } vm_t;
@@ -163,13 +161,17 @@ asi_construct(const vm_t *vm,
     asi_t *tmp = NULL;
 
     if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
+        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     if (NULL == (tmp->addp = calloc(addp_len, vm->word_size))) {
+        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     tmp->addp_len = addp_len;
+    /* key not populated here */
 
+    *newa = tmp;
     return SUCCESS;
 }
               
@@ -179,7 +181,9 @@ static int
 cmp_asi_t_cb(const void *v1,
              const void *v2)
 {
-    return (((asi_t *)(v1))->key - ((asi_t *)(v2))->key);
+    int64_t a = ((asi_t *)(v1))->key;
+    int64_t b = ((asi_t *)(v2))->key;
+    return (a - b);
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -192,6 +196,7 @@ asi_rb_free_cb(void *p)
         free(tmp->addp);
         tmp->addp = NULL;
     }
+    free(tmp);
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -201,10 +206,12 @@ vm_construct(vm_t **new)
     vm_t *tmp = NULL;
 
     if (NULL == new) {
+        out("ERR @ %d\n", __LINE__);
         return ERR_INVLD_INPUT;
     }
     if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
         /* fail -- just bail */
+        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     /* this will get filled in later */
@@ -213,6 +220,7 @@ vm_construct(vm_t **new)
     tmp->pc = 0;
     /* create the address space */
     if (NULL == (tmp->as = rbcreate(cmp_asi_t_cb))) {
+        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
 
@@ -226,7 +234,8 @@ static int
 vm_destruct(vm_t *vm)
 {
     if (NULL == vm) return ERR_INVLD_INPUT;
-    /* XXX TODO */
+    rbdestroy(vm->as, asi_rb_free_cb);
+    free(vm);
     return SUCCESS;
 }
 
@@ -238,9 +247,7 @@ idtaken(const vm_t *vm,
     if (0 == id) {
         return true;
     }
-    else {
-        return (NULL != rbfind(vm->as, (uint32_t *)(&id)));
-    }
+    return (NULL != rbfind(vm->as, &id));
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -251,8 +258,8 @@ getid(const vm_t *vm,
     static uint32_t tid = 0;
 
     do {
-        /* seed prng */
-        tid = (uint32_t)(rand() % 0xFFFFFFFFU);
+        //tid = (uint32_t)(rand() % 0xFFFFFFFFU);
+        tid += 1;
     } while (idtaken(vm, tid));
     /* at this point we should have a valid id */
     *id = tid;
@@ -270,22 +277,31 @@ alloc_array(vm_t *vm,
     static uint32_t aid = 0;
     asi_t *asi = NULL;
 
-    if (SUCCESS != (rc = getid(vm, &aid))) {
+    /* not dealing with zero array */
+    if (NULL != id) {
+        if (SUCCESS != (rc = getid(vm, &aid))) {
+            out("ERR @ %d\n", __LINE__);
+            return rc;
+        }
+    }
+    if (SUCCESS != (rc = asi_construct(vm, nwords, &asi))) {
+        out("ERR @ %d\n", __LINE__);
         return rc;
     }
-    if (NULL == (asi = calloc(1, sizeof(*asi)))) {
-        return ERR_OOR;
+    /* not dealing with zero array */
+    if (NULL != id) {
+        asi->key = aid;
+        *id = aid;
     }
-    if (NULL == (asi->addp = calloc(nwords, vm->word_size))) {
-        return ERR_OOR;
+    /* zero array gets id 0 */
+    else {
+        asi->key = 0;
     }
-    asi->key = aid;
-    asi->addp_len = nwords;
     /* now add the thing to the rbtree */
     if (NULL != rbinsert(vm->as, (void *)asi)) {
+        out("ERR @ %d\n", __LINE__);
         return ERR;
     }
-    *id = aid;
 
     return SUCCESS;
 }
@@ -297,7 +313,8 @@ find_node(const vm_t *vm,
 {
     static struct rbnode *node = NULL;
 
-    if (NULL == (node = rbfind(vm->as, (uint32_t *)&id))) {
+    if (NULL == (node = rbfind(vm->as, &id))) {
+        out("ERR @ %d\n", __LINE__);
         return NULL;
     }
     return node;
@@ -309,6 +326,13 @@ dealloc_array(vm_t *vm,
               uint32_t id)
 {
     static struct rbnode *target = NULL;
+    asi_t *data = NULL;
+
+    if (0 == id) {
+        fprintf(stderr, "error: can't dealloc zero array\n");
+        return ERR;
+    }
+
 
     target = find_node(vm, id);
 
@@ -317,7 +341,9 @@ dealloc_array(vm_t *vm,
         return ERR;
     }
     /* XXX add frees here? */
-    rbdelete(vm->as, target);
+    data = rbdelete(vm->as, target);
+    free(data->addp);
+    free(data);
 
     return SUCCESS;
 }
@@ -327,9 +353,12 @@ static inline asi_t *
 getasip(const vm_t *vm,
         uint32_t id)
 {
-    struct rbnode *node = find_node(vm, id);
+    struct rbnode *node = NULL;
+
+    node = find_node(vm, id);
 
     if (NULL == node) {
+        out("ERR @ %d\n", __LINE__);
         return NULL;
     }
     else {
@@ -342,8 +371,14 @@ static int
 doop(vm_t *vm)
 {
 
+    static uint32_t times = 0;
     static uint32_t rega = 0, regb = 0, regc = 0, w = 0;
-    w = vm->zero_array->addp[vm->pc];
+
+    //if (++times == 1024 * 4) return ERR;
+
+    asi_t *z = getasip(vm, 0);
+
+    w = z->addp[vm->pc];
 
     /* machine register index */
     rega = (w & RA) >> 6; /* 6:8 */
@@ -355,12 +390,14 @@ doop(vm_t *vm)
             if (0x00000000U != vm->mr[regc]) {
                 vm->mr[rega] = vm->mr[regb];
             }
-            out_reg(vm, 0, w, rega, regb, regc);
             break;
         }
         case OP1: {
             asi_t *asi = getasip(vm, vm->mr[regb]);
             if (NULL == asi) {
+                out("ERR @ %d: req: %lu\n", __LINE__,
+                    (unsigned long)vm->mr[regb]);
+                assert(0);
                 return ERR;
             }
             if (vm->mr[regc] >= asi->addp_len) {
@@ -449,27 +486,25 @@ doop(vm_t *vm)
             break;
         }
         case OP12: {
-            /* if we are given the zero array, there is nothing to do */
             if (0 != vm->mr[regb]) {
-                asi_t *old = NULL;
+                asi_t *za = NULL;
                 asi_t *newp = NULL;
-                uint32_t newid = 0;
 
-                if (NULL == (old = getasip(vm, vm->mr[regb]))) {
+                fprintf(stderr, "OP12: %lu\n", (unsigned long)vm->mr[regb]);
+
+                if (NULL == (newp = getasip(vm, vm->mr[regb]))) {
+                    out("ERR @ %d\n", __LINE__);
                     return ERR;
                 }
-                if (SUCCESS != alloc_array(vm, old->addp_len, &newid)) {
-                    /* XXX clean up */
+                if (NULL == (za = getasip(vm, 0))) {
+                    out("ERR @ %d\n", __LINE__);
                     return ERR;
                 }
-                if (NULL == (newp = getasip(vm, newid))) {
-                    return ERR;
-                }
-                newp->addp_len = old->addp_len;
-                (void)memmove(newp->addp, old->addp,
-                              old->addp_len * vm->word_size);
-                vm->zero_array = newp;
-                dealloc_array(vm, old->key);
+                free(za->addp);
+                za->addp = calloc(newp->addp_len, vm->word_size);
+                za->addp_len = newp->addp_len;
+                (void)memmove(za->addp, newp->addp,
+                              newp->addp_len * vm->word_size);
             }
             /* else we are dealing with the current zero array */
             vm->pc = vm->mr[regc];
@@ -498,6 +533,23 @@ doop(vm_t *vm)
 
 /* ////////////////////////////////////////////////////////////////////////// */
 static int
+get_file_size(const char *path,
+              size_t *size)
+{
+    struct stat sbuf;
+    if (0 != stat(path, &sbuf)) {
+        int err = errno;
+        fprintf(stderr, "stat failure: %d (%s)\n", err, strerror(err));
+        return ERR_IO;
+    }
+
+    *size = (size_t)sbuf.st_size;
+
+    return SUCCESS;
+}
+
+/* ////////////////////////////////////////////////////////////////////////// */
+static int
 load_app(vm_t *vm, const char *exe)
 {
     int fd = -1;
@@ -506,11 +558,18 @@ load_app(vm_t *vm, const char *exe)
     int rc = SUCCESS;
     size_t word_index = 0;
     asi_t *zap = NULL;
+    size_t fsize = 0;
 
     if (NULL == vm || NULL == exe) return ERR_INVLD_INPUT;
 
-    if (NULL == (zap = calloc(1, sizeof(*zap)))) {
-        return ERR_OOR;
+    if (SUCCESS != (rc = get_file_size(exe, &fsize))) {
+        return rc;
+    }
+    if (SUCCESS != (rc = alloc_array(vm, fsize / vm->word_size, NULL))) {
+        return rc;
+    }
+    if (NULL == (zap = getasip(vm, 0))) {
+        return ERR;
     }
     if (-1 == (fd = open(exe, O_RDONLY))) {
         int err = errno;
@@ -532,22 +591,16 @@ load_app(vm_t *vm, const char *exe)
         }
         /* else all is well, so append word to program "0" array */
         /* NOTE: a small over allocation... just by one (so no malloc 0) */
-        zap->addp = realloc(zap->addp, (word_index + 1) * vm->word_size);
-        if (NULL == zap->addp) {
-            return ERR_OOR;
-        }
         zap->addp[word_index++] = htonl(ibuf);
     }
-    zap->addp_len = word_index;
-    /* special key for zero array */
-    zap->key = 0;
     /* finish setting up vm state */
     vm->app_size = word_index * vm->word_size;
-    if (NULL != rbinsert(vm->as, (void *)zap)) {
-        fprintf(stderr, "unrecoverable error @ %s:%d\n", __func__, __LINE__);
+    /* sanity */
+    if (vm->app_size != fsize) {
+        fprintf(stderr, "read inconsistency: expected: %lu read: %lu\n",
+                (unsigned long)fsize, vm->app_size);
         return ERR;
     }
-    vm->zero_array = zap;
 
 out:
     if (-1 != fd) {
@@ -581,7 +634,9 @@ go(const char *exe)
     int rc = SUCCESS;
     vm_t *vm = NULL;
 
-    srand((unsigned int)time(NULL));
+    /* XXX RM */
+    //srand((unsigned int)time(NULL));
+    srand((unsigned int)0);
 
     if (SUCCESS != (rc = vm_construct(&vm))) {
         fprintf(stderr, "vm_construct error: %d\n", rc);
