@@ -1,7 +1,7 @@
-bitmachine
+vmdeux
 
 build:
 make
 
 run:
-./bitmachine [APP]
+./vmdeux [APP]

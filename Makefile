@@ -1,5 +1,5 @@
 SHELL  = /bin/sh
-TARGET = bitmachine
+TARGET = vmdeux
 CFLAGS = -Wall -g -O0
 CFLAGS = -Wall -DNDEBUG -O3
 # gprof
