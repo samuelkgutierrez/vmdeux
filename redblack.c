@@ -302,14 +302,16 @@ enum rbtraversal order;
             if ((error = func(node->data, cookie)) != 0) {
                 return(error);
             }
-        if ((error = rbapply_node(tree, node->left, func, cookie, order)) != 0) {
+        if ((error = rbapply_node(tree, node->left, func,
+                                  cookie, order)) != 0) {
             return(error);
         }
         if (order == inorder)
             if ((error = func(node->data, cookie)) != 0) {
                 return(error);
             }
-        if ((error = rbapply_node(tree, node->right, func, cookie, order)) != 0) {
+        if ((error = rbapply_node(tree, node->right, func,
+                                  cookie, order)) != 0) {
             return(error);
         }
         if (order == postorder)
@@ -449,7 +451,8 @@ struct rbnode *node;
                 rotate_left(tree, node->parent);
                 sibling = node->parent->right;
             }
-            if (sibling->right->color == black && sibling->left->color == black) {
+            if (sibling->right->color == black &&
+                sibling->left->color == black) {
                 sibling->color = red;
                 node = node->parent;
             }
@@ -475,7 +478,8 @@ struct rbnode *node;
                 rotate_right(tree, node->parent);
                 sibling = node->parent->left;
             }
-            if (sibling->right->color == black && sibling->left->color == black) {
+            if (sibling->right->color == black &&
+                sibling->left->color == black) {
                 sibling->color = red;
                 node = node->parent;
             }

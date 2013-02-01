@@ -59,7 +59,7 @@ do {                                                                           \
 } while (0)
 #endif
 
-#define likely(x) __builtin_expect(!!(x), 1)
+#define likely(x)   __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
 /* opcode is given by the bits 28:31 */
