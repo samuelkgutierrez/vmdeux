@@ -179,8 +179,11 @@ static int
 cmp_asi_t_cb(const void *v1,
              const void *v2)
 {
-    int64_t a = ((asi_t *)(v1))->key;
-    int64_t b = ((asi_t *)(v2))->key;
+    static int64_t a = 0, b = 0;
+
+    a = ((asi_t *)(v1))->key;
+    b = ((asi_t *)(v2))->key;
+
     return (a - b);
 }
 
@@ -269,7 +272,8 @@ alloc_array(vm_t *vm,
     static int rc = SUCCESS;
     /* available id */
     static uint32_t aid = 0;
-    asi_t *asi = NULL;
+    /* address space item pointer */
+    static asi_t *asi = NULL;
 
     /* not dealing with zero array */
     if (NULL != id) {
@@ -277,7 +281,7 @@ alloc_array(vm_t *vm,
             return rc;
         }
     }
-    if (SUCCESS != (rc = asi_construct(vm, nwords, &asi))) {
+    if (unlikely(SUCCESS != (rc = asi_construct(vm, nwords, &asi)))) {
         return rc;
     }
     /* not dealing with zero array */
@@ -290,7 +294,7 @@ alloc_array(vm_t *vm,
         asi->key = 0;
     }
     /* now add the thing to the rbtree */
-    if (NULL != rbinsert(vm->as, (void *)asi)) {
+    if (unlikely(NULL != rbinsert(vm->as, (void *)asi))) {
         return ERR;
     }
 
@@ -304,7 +308,7 @@ find_node(const vm_t *vm,
 {
     static struct rbnode *node = NULL;
 
-    if (NULL == (node = rbfind(vm->as, &id))) {
+    if (unlikely(NULL == (node = rbfind(vm->as, &id)))) {
         return NULL;
     }
     return node;
@@ -316,9 +320,9 @@ dealloc_array(vm_t *vm,
               uint32_t id)
 {
     static struct rbnode *target = NULL;
-    asi_t *data = NULL;
+    static asi_t *data = NULL;
 
-    if (0 == id) {
+    if (unlikely(0 == id)) {
         fprintf(stderr, "error: can't dealloc zero array\n");
         return ERR;
     }
@@ -341,7 +345,7 @@ static inline asi_t *
 getasip(const vm_t *vm,
         uint32_t id)
 {
-    struct rbnode *node = NULL;
+    static struct rbnode *node = NULL;
 
     node = find_node(vm, id);
 
@@ -362,7 +366,6 @@ doop(vm_t *vm)
     static asi_t *z = NULL;
 
     z = getasip(vm, 0);
-
     w = z->addp[vm->pc];
 
     /* machine register index */
@@ -472,10 +475,10 @@ doop(vm_t *vm)
                 asi_t *za = NULL;
                 asi_t *newp = NULL;
 
-                if (NULL == (newp = getasip(vm, vm->mr[regb]))) {
+                if (unlikely(NULL == (newp = getasip(vm, vm->mr[regb])))) {
                     return ERR;
                 }
-                if (NULL == (za = getasip(vm, 0))) {
+                if (unlikely(NULL == (za = getasip(vm, 0)))) {
                     return ERR;
                 }
                 free(za->addp);
