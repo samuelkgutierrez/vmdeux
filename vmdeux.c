@@ -161,11 +161,9 @@ asi_construct(const vm_t *vm,
     asi_t *tmp = NULL;
 
     if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     if (NULL == (tmp->addp = calloc(addp_len, vm->word_size))) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     tmp->addp_len = addp_len;
@@ -192,7 +190,7 @@ asi_rb_free_cb(void *p)
 {
     asi_t *tmp = (asi_t *)p;
 
-    if (NULL != tmp->addp) {
+    if (unlikely(NULL != tmp->addp)) {
         free(tmp->addp);
         tmp->addp = NULL;
     }
@@ -206,12 +204,10 @@ vm_construct(vm_t **new)
     vm_t *tmp = NULL;
 
     if (NULL == new) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_INVLD_INPUT;
     }
     if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
         /* fail -- just bail */
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     /* this will get filled in later */
@@ -220,7 +216,6 @@ vm_construct(vm_t **new)
     tmp->pc = 0;
     /* create the address space */
     if (NULL == (tmp->as = rbcreate(cmp_asi_t_cb))) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
 
@@ -283,7 +278,6 @@ alloc_array(vm_t *vm,
         }
     }
     if (SUCCESS != (rc = asi_construct(vm, nwords, &asi))) {
-        out("ERR @ %d\n", __LINE__);
         return rc;
     }
     /* not dealing with zero array */
@@ -297,7 +291,6 @@ alloc_array(vm_t *vm,
     }
     /* now add the thing to the rbtree */
     if (NULL != rbinsert(vm->as, (void *)asi)) {
-        out("ERR @ %d\n", __LINE__);
         return ERR;
     }
 
@@ -312,7 +305,6 @@ find_node(const vm_t *vm,
     static struct rbnode *node = NULL;
 
     if (NULL == (node = rbfind(vm->as, &id))) {
-        out("ERR @ %d\n", __LINE__);
         return NULL;
     }
     return node;
@@ -481,11 +473,9 @@ doop(vm_t *vm)
                 asi_t *newp = NULL;
 
                 if (NULL == (newp = getasip(vm, vm->mr[regb]))) {
-                    out("ERR @ %d\n", __LINE__);
                     return ERR;
                 }
                 if (NULL == (za = getasip(vm, 0))) {
-                    out("ERR @ %d\n", __LINE__);
                     return ERR;
                 }
                 free(za->addp);
