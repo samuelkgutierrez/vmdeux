@@ -443,14 +443,14 @@ doop(vm_t *vm)
             return HALT;
         case OP8: {
             static uint32_t id = 0;
-            if (SUCCESS != alloc_array(vm, vm->mr[regc], &id)) {
+            if (unlikely(SUCCESS != alloc_array(vm, vm->mr[regc], &id))) {
                 return ERR;
             }
             vm->mr[regb] = id;
             break;
         }
         case OP9: {
-            if (SUCCESS != dealloc_array(vm, vm->mr[regc])) {
+            if (unlikely(SUCCESS != dealloc_array(vm, vm->mr[regc]))) {
                 fprintf(stderr, "dealloc array failure @ %d\n", __LINE__);
                 return ERR;
             }
