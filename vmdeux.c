@@ -161,11 +161,9 @@ asi_construct(const vm_t *vm,
     asi_t *tmp = NULL;
 
     if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     if (NULL == (tmp->addp = calloc(addp_len, vm->word_size))) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     tmp->addp_len = addp_len;
@@ -181,8 +179,11 @@ static int
 cmp_asi_t_cb(const void *v1,
              const void *v2)
 {
-    int64_t a = ((asi_t *)(v1))->key;
-    int64_t b = ((asi_t *)(v2))->key;
+    static int64_t a = 0, b = 0;
+
+    a = ((asi_t *)(v1))->key;
+    b = ((asi_t *)(v2))->key;
+
     return (a - b);
 }
 
@@ -192,7 +193,7 @@ asi_rb_free_cb(void *p)
 {
     asi_t *tmp = (asi_t *)p;
 
-    if (NULL != tmp->addp) {
+    if (unlikely(NULL != tmp->addp)) {
         free(tmp->addp);
         tmp->addp = NULL;
     }
@@ -206,12 +207,10 @@ vm_construct(vm_t **new)
     vm_t *tmp = NULL;
 
     if (NULL == new) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_INVLD_INPUT;
     }
     if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
         /* fail -- just bail */
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
     /* this will get filled in later */
@@ -220,7 +219,6 @@ vm_construct(vm_t **new)
     tmp->pc = 0;
     /* create the address space */
     if (NULL == (tmp->as = rbcreate(cmp_asi_t_cb))) {
-        out("ERR @ %d\n", __LINE__);
         return ERR_OOR;
     }
 
@@ -274,7 +272,8 @@ alloc_array(vm_t *vm,
     static int rc = SUCCESS;
     /* available id */
     static uint32_t aid = 0;
-    asi_t *asi = NULL;
+    /* address space item pointer */
+    static asi_t *asi = NULL;
 
     /* not dealing with zero array */
     if (NULL != id) {
@@ -282,8 +281,7 @@ alloc_array(vm_t *vm,
             return rc;
         }
     }
-    if (SUCCESS != (rc = asi_construct(vm, nwords, &asi))) {
-        out("ERR @ %d\n", __LINE__);
+    if (unlikely(SUCCESS != (rc = asi_construct(vm, nwords, &asi)))) {
         return rc;
     }
     /* not dealing with zero array */
@@ -296,8 +294,7 @@ alloc_array(vm_t *vm,
         asi->key = 0;
     }
     /* now add the thing to the rbtree */
-    if (NULL != rbinsert(vm->as, (void *)asi)) {
-        out("ERR @ %d\n", __LINE__);
+    if (unlikely(NULL != rbinsert(vm->as, (void *)asi))) {
         return ERR;
     }
 
@@ -311,8 +308,7 @@ find_node(const vm_t *vm,
 {
     static struct rbnode *node = NULL;
 
-    if (NULL == (node = rbfind(vm->as, &id))) {
-        out("ERR @ %d\n", __LINE__);
+    if (unlikely(NULL == (node = rbfind(vm->as, &id)))) {
         return NULL;
     }
     return node;
@@ -324,9 +320,9 @@ dealloc_array(vm_t *vm,
               uint32_t id)
 {
     static struct rbnode *target = NULL;
-    asi_t *data = NULL;
+    static asi_t *data = NULL;
 
-    if (0 == id) {
+    if (unlikely(0 == id)) {
         fprintf(stderr, "error: can't dealloc zero array\n");
         return ERR;
     }
@@ -349,7 +345,7 @@ static inline asi_t *
 getasip(const vm_t *vm,
         uint32_t id)
 {
-    struct rbnode *node = NULL;
+    static struct rbnode *node = NULL;
 
     node = find_node(vm, id);
 
@@ -370,7 +366,6 @@ doop(vm_t *vm)
     static asi_t *z = NULL;
 
     z = getasip(vm, 0);
-
     w = z->addp[vm->pc];
 
     /* machine register index */
@@ -480,12 +475,10 @@ doop(vm_t *vm)
                 asi_t *za = NULL;
                 asi_t *newp = NULL;
 
-                if (NULL == (newp = getasip(vm, vm->mr[regb]))) {
-                    out("ERR @ %d\n", __LINE__);
+                if (unlikely(NULL == (newp = getasip(vm, vm->mr[regb])))) {
                     return ERR;
                 }
-                if (NULL == (za = getasip(vm, 0))) {
-                    out("ERR @ %d\n", __LINE__);
+                if (unlikely(NULL == (za = getasip(vm, 0)))) {
                     return ERR;
                 }
                 free(za->addp);
