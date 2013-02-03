@@ -66,7 +66,6 @@ do {                                                                           \
 #define OP_MASK  0xF0000000U
 
 #define N_REGISTERS 8
-#define MEM_MAX_INDEX ( 1 << 9 )
 
 #define OP0  0x00000000U
 #define OP1  0x10000000U
