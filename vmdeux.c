@@ -137,7 +137,8 @@ typedef struct vm_t {
 } vm_t;
 
 /* ////////////////////////////////////////////////////////////////////////// */
-void
+#if 0
+static void
 out_reg(const vm_t *vm,
         int opindx,
         uint32_t w,
@@ -150,6 +151,7 @@ out_reg(const vm_t *vm,
         vm->pc, w, (unsigned long)vm->pc, opstrs[opindx],
         rega, regb, regc, vm->mr[rega], vm->mr[regb], vm->mr[regc]);
 }
+#endif
 
 /* ////////////////////////////////////////////////////////////////////////// */
 static inline int
@@ -157,17 +159,16 @@ asi_construct(const vm_t *vm,
               size_t addp_len,
               asi_t **newa)
 {
-    asi_t *tmp = NULL;
+    static asi_t *tmp = NULL;
 
-    if (NULL == (tmp = calloc(1, sizeof(*tmp)))) {
+    if (unlikely(NULL == (tmp = calloc(1, sizeof(*tmp))))) {
         return ERR_OOR;
     }
-    if (NULL == (tmp->addp = calloc(addp_len, vm->word_size))) {
+    if (unlikely(NULL == (tmp->addp = calloc(addp_len, vm->word_size)))) {
         return ERR_OOR;
     }
     tmp->addp_len = addp_len;
     /* key not populated here */
-
     *newa = tmp;
     return SUCCESS;
 }
@@ -222,7 +223,6 @@ vm_construct(vm_t **new)
     }
 
     *new = tmp;
-
     return SUCCESS;
 }
 
@@ -517,6 +517,7 @@ get_file_size(const char *path,
               size_t *size)
 {
     struct stat sbuf;
+
     if (0 != stat(path, &sbuf)) {
         int err = errno;
         fprintf(stderr, "stat failure: %d (%s)\n", err, strerror(err));
