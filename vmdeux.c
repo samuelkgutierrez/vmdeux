@@ -175,7 +175,7 @@ asi_construct(const vm_t *vm,
 
 /* ////////////////////////////////////////////////////////////////////////// */
 /* callback for asi_t compares */
-static int
+static inline int
 cmp_asi_t_cb(const void *v1,
              const void *v2)
 {
@@ -188,7 +188,7 @@ cmp_asi_t_cb(const void *v1,
 }
 
 /* ////////////////////////////////////////////////////////////////////////// */
-static void
+static inline void
 asi_rb_free_cb(void *p)
 {
     asi_t *tmp = (asi_t *)p;
