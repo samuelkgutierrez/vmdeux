@@ -19,3 +19,4 @@ test-rb: redblack.o
 
 clean:
 	/bin/rm -f ${TARGET} *.o
+	/bin/rm -rf vmdeux.dSYM
