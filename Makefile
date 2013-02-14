@@ -3,7 +3,7 @@ TARGET = vmdeux
 CFLAGS = -Wall -g -O0
 CFLAGS = -Wall -DNDEBUG -O3
 # gprof
-CFLAGS = -Wall -g -pg
+#CFLAGS = -Wall -g -pg
 
 .SUFFIXES:
 .SUFFIXES: .c .o
