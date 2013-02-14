@@ -1,3 +1,20 @@
 project0 - Samuel K. Gutierrez' vmdeux
 
 Machine Overview
+Machine implemented in C. The memory allocator is built using a red-black tree.
+
+Build
+make
+
+Run
+vmdeux APP
+
+Performance Characteristics
+Found in perf subdirectory.
+
+UMIX
+howie's password is xyzzy
+guest's password is airplane
+ohmega's password is bidirectional
+
+a.out in the guest account core dumps.
