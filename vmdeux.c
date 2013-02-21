@@ -134,6 +134,7 @@ typedef struct vm_t {
     uint32_t pc;
     /* address space using a red-black tree */
     struct rbtree *as;
+    asi_t *zap;
 } vm_t;
 
 /* ////////////////////////////////////////////////////////////////////////// */
@@ -292,9 +293,14 @@ alloc_array(vm_t *vm,
     else {
         asi->key = 0;
     }
-    /* now add the thing to the rbtree */
-    if (unlikely(NULL != rbinsert(vm->as, (void *)asi))) {
-        return ERR;
+    if (NULL != id) {
+        /* now add the thing to the rbtree */
+        if (unlikely(NULL != rbinsert(vm->as, (void *)asi))) {
+            return ERR;
+        }
+    }
+    else {
+        vm->zap = asi;
     }
 
     return SUCCESS;
@@ -346,6 +352,8 @@ getasip(const vm_t *vm,
 {
     static struct rbnode *node = NULL;
 
+    if (0 == id) return vm->zap;
+
     node = find_node(vm, id);
 
     if (unlikely(NULL == node)) {
@@ -362,10 +370,8 @@ doop(vm_t *vm)
 {
 
     static uint32_t rega = 0, regb = 0, regc = 0, w = 0;
-    static asi_t *z = NULL;
 
-    z = getasip(vm, 0);
-    w = z->addp[vm->pc];
+    w = vm->zap->addp[vm->pc];
 
     /* machine register index */
     rega = (w & RA) >> 6; /* 6:8 */
@@ -474,9 +480,7 @@ doop(vm_t *vm)
                 if (unlikely(NULL == (newp = getasip(vm, vm->mr[regb])))) {
                     return ERR;
                 }
-                if (unlikely(NULL == (za = getasip(vm, 0)))) {
-                    return ERR;
-                }
+                za = vm->zap;
                 free(za->addp);
                 za->addp = calloc(newp->addp_len, vm->word_size);
                 za->addp_len = newp->addp_len;
@@ -546,9 +550,7 @@ load_app(vm_t *vm, const char *exe)
     if (SUCCESS != (rc = alloc_array(vm, fsize / vm->word_size, NULL))) {
         return rc;
     }
-    if (NULL == (zap = getasip(vm, 0))) {
-        return ERR;
-    }
+    zap = vm->zap;
     if (-1 == (fd = open(exe, O_RDONLY))) {
         int err = errno;
         fprintf(stderr, "open failure: %d (%s)\n", err, strerror(err));
