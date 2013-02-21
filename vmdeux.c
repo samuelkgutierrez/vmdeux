@@ -134,6 +134,7 @@ typedef struct vm_t {
     uint32_t pc;
     /* address space using a red-black tree */
     struct rbtree *as;
+    /* pointer to zero array */
     asi_t *zap;
 } vm_t;
 
