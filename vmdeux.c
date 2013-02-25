@@ -101,7 +101,7 @@ char *opstrs[32] = {
     "halt",
     "alloc",
     "dealloc",
-    "Output",
+    "output",
     "in",
     "loadprog",
     "loadimm",
