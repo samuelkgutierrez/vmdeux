@@ -237,8 +237,10 @@ vm_destruct(vm_t *vm)
 {
     if (NULL == vm) return ERR_INVLD_INPUT;
     rbdestroy(vm->as, asi_rb_free_cb);
-    free(vm->zap->addp);
-    free(vm->zap);
+    if (vm->zap) {
+        free(vm->zap->addp);
+        free(vm->zap);
+    }
     free(vm);
     return SUCCESS;
 }
