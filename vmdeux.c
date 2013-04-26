@@ -223,6 +223,7 @@ vm_construct(vm_t **new)
     tmp->pc = 0;
     /* create the address space */
     if (NULL == (tmp->as = rbcreate(cmp_asi_t_cb))) {
+        free(tmp);
         return ERR_OOR;
     }
 
